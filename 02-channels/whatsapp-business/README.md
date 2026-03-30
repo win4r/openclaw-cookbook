@@ -10,7 +10,7 @@ Connect your OpenClaw agent to WhatsApp via the Meta Cloud API. Users message a 
 
 ## Prerequisites
 
-- OpenClaw installed and running (`openclaw start` works)
+- OpenClaw installed and running (`openclaw gateway` works)
 - A Meta Business account (create at [business.facebook.com](https://business.facebook.com))
 - A phone number that is not already registered with WhatsApp (you cannot reuse a personal WhatsApp number)
 - A publicly accessible URL for your OpenClaw instance (WhatsApp uses webhooks)
@@ -70,7 +70,7 @@ OpenClaw handles the verification challenge automatically if the plugin is enabl
 ## Step 3: Enable the WhatsApp Plugin
 
 ```bash
-openclaw plugin enable whatsapp
+openclaw plugins enable whatsapp
 ```
 
 ---
@@ -79,21 +79,25 @@ openclaw plugin enable whatsapp
 
 ```bash
 # Access token (permanent, from system user)
-openclaw config set whatsapp.accessToken "EAAxxxxxxx..."
+openclaw config set channels.whatsapp.accounts.main.accessToken "EAAxxxxxxx..."
 
 # Phone Number ID (from API Setup page)
-openclaw config set whatsapp.phoneNumberId "1234567890"
+openclaw config set channels.whatsapp.accounts.main.phoneNumberId "1234567890"
 
 # Verify token (the random string you chose for the webhook)
-openclaw config set whatsapp.verifyToken "my-verify-token-abc123"
+openclaw config set channels.whatsapp.accounts.main.webhookVerifyToken "my-verify-token-abc123"
 ```
 
 ---
 
 ## Step 5: Bind to an Agent
 
-```bash
-openclaw config set whatsapp.agent "default"
+Add a binding in `openclaw.json`:
+
+```json
+"bindings": [
+  { "agentId": "default", "match": { "channel": "whatsapp", "accountId": "main" } }
+]
 ```
 
 ---
@@ -101,7 +105,7 @@ openclaw config set whatsapp.agent "default"
 ## Step 6: Restart and Verify
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 openclaw logs | grep whatsapp
 ```
 
@@ -124,17 +128,21 @@ You should see:
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "whatsapp": {
-      "accessToken": "EAAxxxxxxx...",
-      "phoneNumberId": "1234567890",
-      "verifyToken": "my-verify-token-abc123",
-      "agent": "default",
-      "policies": {
-        "numberAllowlist": null
+      "enabled": true,
+      "accounts": {
+        "main": {
+          "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+          "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+          "webhookVerifyToken": "${WHATSAPP_WEBHOOK_VERIFY_TOKEN}"
+        }
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "whatsapp", "accountId": "main" } }
+  ]
 }
 ```
 
@@ -147,7 +155,7 @@ You should see:
 Restrict which phone numbers can interact with the bot:
 
 ```bash
-openclaw config set whatsapp.policies.numberAllowlist '["+1234567890", "+0987654321"]'
+openclaw config set channels.whatsapp.policies.numberAllowlist '["+1234567890", "+0987654321"]'
 ```
 
 If not set, any number that messages the bot gets a response (subject to Meta's own restrictions).
@@ -157,7 +165,7 @@ If not set, any number that messages the bot gets a response (subject to Meta's 
 WhatsApp groups are supported, but the bot only responds when mentioned or when a message starts with a configured trigger word:
 
 ```bash
-openclaw config set whatsapp.policies.groupTrigger "@bot"
+openclaw config set channels.whatsapp.policies.groupTrigger "@bot"
 ```
 
 ---
@@ -215,7 +223,7 @@ Exceeding limits results in temporary blocks. Monitor your usage in the Meta dev
 ### Bot not responding
 
 1. **Check webhook status.** In the Meta developer console, go to WhatsApp > Configuration. The webhook URL should show as verified (green checkmark).
-2. **Check the access token.** Run `openclaw config get whatsapp.accessToken`. If using a temporary token, it may have expired. Generate a permanent one from a system user.
+2. **Check the access token.** Run `openclaw config get channels.whatsapp.accounts.main.accessToken`. If using a temporary token, it may have expired. Generate a permanent one from a system user.
 3. **Check the phone number ID.** This is the Phone Number ID from the API Setup page, not the phone number itself.
 4. **Check webhook subscriptions.** Make sure you subscribed to the `messages` field in the webhook configuration.
 5. **Check logs.** `openclaw logs | grep whatsapp` -- look for `403` (bad token), `400` (bad request), or `webhook verification failed`.
@@ -232,7 +240,7 @@ The bot received a message type it cannot process (e.g., a voice note, sticker, 
 
 ### Webhook verification failing
 
-1. Verify that `whatsapp.verifyToken` in OpenClaw matches the verify token you entered in the Meta developer console.
+1. Verify that `channels.whatsapp.accounts.main.webhookVerifyToken` in OpenClaw matches the verify token you entered in the Meta developer console.
 2. Check that your OpenClaw instance is reachable from the internet at the webhook URL.
 3. Check `openclaw logs` for the verification challenge -- it shows the expected and received tokens.
 

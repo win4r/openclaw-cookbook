@@ -79,25 +79,25 @@ openclaw --version
 
 ```bash
 # 初始化工作空间
-openclaw init
+openclaw setup
 
 # 添加模型供应商密钥
 echo 'ANTHROPIC_API_KEY=sk-ant-...' >> ~/.openclaw/.env
 
 # 启动网关
-openclaw start
+openclaw gateway
 ```
 
 ### 开始对话
 
 ```bash
 # CLI 模式
-openclaw chat "你好，你能做什么？"
+openclaw message send "你好，你能做什么？"
 
 # 或者接入 Telegram（详见 02-channels/）
-openclaw plugin enable telegram
+openclaw plugins enable telegram
 openclaw config set telegram.bots.main.token "你的BOT_TOKEN"
-openclaw restart
+openclaw gateway --restart
 ```
 
 搞定。你的私有 AI 智能体已经在运行了。接下来让它变得有用 —— 选一个模块开始，或者直接跳到配方。
@@ -144,6 +144,7 @@ openclaw restart
 ├── USER.md          # 智能体对你的了解
 ├── MEMORY.md        # 长期记忆笔记
 ├── BOOT.md          # 启动健康检查
+├── HEARTBEAT.md     # 周期性健康检查（可选）
 ├── skills/          # 可复用技能定义
 └── checklists/      # 操作前安全检查
 ```
@@ -164,12 +165,12 @@ openclaw restart
 
 ```bash
 # 内置插件
-openclaw plugin enable telegram
-openclaw plugin enable memory-lancedb-pro
+openclaw plugins enable telegram
+openclaw plugins enable memory-lancedb-pro
 
 # 社区插件 (npm)
 npm install -g @tencent-weixin/openclaw-weixin
-openclaw plugin enable openclaw-weixin
+openclaw plugins enable openclaw-weixin
 ```
 
 ---

@@ -63,55 +63,60 @@ Every channel is an OpenClaw plugin. The pattern is the same for all:
 
 ```bash
 # Enable the plugin
-openclaw plugin enable <channel>
+openclaw plugins enable <channel>
 
 # Configure credentials
 openclaw config set <channel>.<setting> "<value>"
 
 # Restart to pick up changes
-openclaw restart
+openclaw gateway --restart
 ```
 
 ### Configuration
 
-Channel config lives in `openclaw.json` under `plugins.<channel>`:
+Channel config lives in `openclaw.json` under `channels.<channel>`:
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "telegram": {
-      "bots": {
-        "main": {
-          "token": "123456:ABC-DEF...",
-          "agent": "default"
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "accounts": {
+        "main-bot": {
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "pairing",
+          "groupPolicy": "allowlist"
         }
-      },
-      "policies": {
-        "pairingRequired": true
       }
     },
     "discord": {
-      "bots": {
-        "main": {
-          "token": "MTIz...",
-          "agent": "default"
+      "enabled": true,
+      "accounts": {
+        "main-bot": {
+          "botToken": "${DISCORD_BOT_TOKEN}"
         }
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "telegram", "accountId": "main-bot" } },
+    { "agentId": "default", "match": { "channel": "discord", "accountId": "main-bot" } }
+  ]
 }
 ```
 
-### Binding Bots to Agents
+### Binding Accounts to Agents
 
-Each bot within a channel can be bound to a different agent:
+Each account within a channel can be bound to a different agent via the top-level `bindings` array:
 
-```bash
-# Telegram bot @support_bot uses the "support" agent
-openclaw config set telegram.bots.support.agent "support"
-
-# Discord bot uses the "community" agent
-openclaw config set discord.bots.main.agent "community"
+```json
+"bindings": [
+  { "agentId": "support", "match": { "channel": "telegram", "accountId": "support-bot" } },
+  { "agentId": "community", "match": { "channel": "discord", "accountId": "main-bot" } }
+]
 ```
 
 This lets you expose different agent personalities on different platforms or different bot handles.
@@ -138,11 +143,11 @@ Channel plugins store their runtime state in `~/.openclaw/<channel>/`. This incl
 You can enable all channels simultaneously:
 
 ```bash
-openclaw plugin enable telegram
-openclaw plugin enable discord
-openclaw plugin enable slack
-openclaw plugin enable whatsapp
-openclaw restart
+openclaw plugins enable telegram
+openclaw plugins enable discord
+openclaw plugins enable slack
+openclaw plugins enable whatsapp
+openclaw gateway --restart
 ```
 
 All channels share the same gateway, agents, memory, and tools. A user messaging on Telegram and another on Discord can talk to the same agent with the same long-term memory.

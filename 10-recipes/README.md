@@ -8,12 +8,12 @@ End-to-end, runnable scenarios. Each recipe takes you from zero to a working sys
 
 ## Recipe Index
 
-| # | Recipe | What You Build | Difficulty | Time |
-|---|--------|----------------|------------|------|
-| 1 | [Personal AI on Telegram](./personal-ai-on-telegram/) | A private AI assistant with memory, web search, and custom personality -- accessible from your phone | Beginner | 30 min |
-| 2 | [Customer Support Bot](./customer-support-bot/) | A multi-language support agent with knowledge base, escalation rules, and conversation history | Intermediate | 30 min |
-| 3 | [Code Review Team](./code-review-team/) | A ClawTeam swarm that reviews PRs from multiple angles (security, performance, style) | Advanced | 45 min |
-| 4 | [Research Assistant](./research-assistant/) | An agent that researches topics, summarizes findings, and delivers results via chat | Intermediate | 30 min |
+| # | Recipe | What You Build | Difficulty | Time | Status |
+|---|--------|----------------|------------|------|--------|
+| 1 | [Personal AI on Telegram](./personal-ai-on-telegram/) | A private AI assistant with memory, web search, and custom personality -- accessible from your phone | Beginner | 30 min | Ready |
+| 2 | [Customer Support Bot](./customer-support-bot/) | A multi-language support agent with knowledge base, escalation rules, and conversation history | Intermediate | 30 min | Ready |
+| 3 | [Code Review Team](./code-review-team/) | A ClawTeam swarm that reviews PRs from multiple angles (security, performance, style) | Advanced | 45 min | *Coming Soon* |
+| 4 | [Research Assistant](./research-assistant/) | An agent that researches topics, summarizes findings, and delivers results via chat | Intermediate | 30 min | *Coming Soon* |
 
 ---
 
@@ -22,7 +22,7 @@ End-to-end, runnable scenarios. Each recipe takes you from zero to a working sys
 Every recipe assumes:
 
 - **Node.js 18+** is installed (`node --version`)
-- **OpenClaw is installed** (`npm install -g openclaw && openclaw init`)
+- **OpenClaw is installed** (`npm install -g openclaw && openclaw setup`)
 - **One API key** is configured in `~/.openclaw/.env`
 
 If you have not done this yet, complete the [Quickstart](../01-quickstart/) first (15 minutes).

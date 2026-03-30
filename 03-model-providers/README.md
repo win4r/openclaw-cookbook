@@ -64,7 +64,7 @@ echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> ~/.openclaw/.env
   "models": {
     "providers": {
       "anthropic": {
-        "type": "anthropic",
+        "api": "anthropic-messages",
         "apiKey": "${ANTHROPIC_API_KEY}"
       }
     }
@@ -85,11 +85,9 @@ echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' >> ~/.openclaw/.env
 ```json
 {
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "claude-sonnet-4-6"
-      }
-    }
+    "list": [
+      { "id": "default", "name": "Default", "model": { "primary": "anthropic/claude-sonnet-4-6" } }
+    ]
   }
 }
 ```
@@ -111,7 +109,7 @@ echo 'OPENAI_API_KEY=sk-proj-...' >> ~/.openclaw/.env
   "models": {
     "providers": {
       "openai": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${OPENAI_API_KEY}"
       }
     }
@@ -148,9 +146,12 @@ echo 'MINIMAX_API_KEY=eyJ...' >> ~/.openclaw/.env
   "models": {
     "providers": {
       "minimax": {
-        "type": "anthropic",
-        "apiKey": "${MINIMAX_API_KEY}",
-        "baseUrl": "https://api.minimaxi.com/anthropic"
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "api": "anthropic-messages",
+        "authHeader": true,
+        "models": [
+          { "id": "MiniMax-M2.7", "name": "MiniMax M2.7", "contextWindow": 204800 }
+        ]
       }
     }
   }
@@ -161,18 +162,16 @@ echo 'MINIMAX_API_KEY=eyJ...' >> ~/.openclaw/.env
 
 | Model | Best For | Context Window |
 |-------|----------|----------------|
-| `MiniMax-M1` | Long-form content, creative writing | 1M tokens |
+| `MiniMax-M2.7` | Long-form content, creative writing | 200K tokens |
 
 Because MiniMax uses the Anthropic-compatible API format, you reference its models with the same syntax as any Anthropic model. Set the model name in the agent's model assignment:
 
 ```json
 {
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "MiniMax-M1"
-      }
-    }
+    "list": [
+      { "id": "default", "name": "Default", "model": { "primary": "minimax/MiniMax-M2.7" } }
+    ]
   }
 }
 ```
@@ -194,7 +193,7 @@ echo 'MOONSHOT_API_KEY=sk-...' >> ~/.openclaw/.env
   "models": {
     "providers": {
       "moonshot": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${MOONSHOT_API_KEY}",
         "baseUrl": "https://api.moonshot.cn/v1"
       }
@@ -231,7 +230,7 @@ echo 'DEEPSEEK_API_KEY=sk-...' >> ~/.openclaw/.env
   "models": {
     "providers": {
       "deepseek": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${DEEPSEEK_API_KEY}",
         "baseUrl": "https://api.deepseek.com/v1"
       }
@@ -272,7 +271,7 @@ ollama pull qwen2.5:32b
   "models": {
     "providers": {
       "ollama": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "ollama",
         "baseUrl": "http://localhost:11434/v1"
       }
@@ -299,14 +298,14 @@ ollama pull qwen2.5:32b
 
 ### Any OpenAI-Compatible API
 
-Any provider that exposes an OpenAI-compatible `/v1/chat/completions` endpoint works the same way. Set `type` to `"openai"`, provide the `baseUrl`, and add a key if required.
+Any provider that exposes an OpenAI-compatible `/v1/chat/completions` endpoint works the same way. Set `api` to `"openai-chat"`, provide the `baseUrl`, and add a key if required.
 
 ```json
 {
   "models": {
     "providers": {
       "my-provider": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${MY_PROVIDER_KEY}",
         "baseUrl": "https://my-llm-proxy.internal.corp/v1"
       }
@@ -340,15 +339,15 @@ Request → primary model
 ```json
 {
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "claude-sonnet-4-6",
-        "fallback": [
-          "gpt-4.1",
-          "deepseek-chat"
-        ]
+    "list": [
+      {
+        "id": "default", "name": "Default",
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-6",
+          "fallbacks": ["openai/gpt-4.1", "deepseek/deepseek-chat"]
+        }
       }
-    }
+    ]
   }
 }
 ```
@@ -360,18 +359,22 @@ In this example, if Claude is rate-limited, OpenClaw tries GPT-4.1. If that also
 ```json
 {
   "agents": {
-    "support": {
-      "models": {
-        "primary": "claude-haiku-3-5",
-        "fallback": ["gpt-4.1-mini"]
+    "list": [
+      {
+        "id": "support", "name": "Support",
+        "model": {
+          "primary": "anthropic/claude-haiku-3-5",
+          "fallbacks": ["openai/gpt-4.1-mini"]
+        }
+      },
+      {
+        "id": "coding", "name": "Coding",
+        "model": {
+          "primary": "anthropic/claude-opus-4-6",
+          "fallbacks": ["openai/gpt-5.4", "deepseek/deepseek-reasoner"]
+        }
       }
-    },
-    "coding": {
-      "models": {
-        "primary": "claude-opus-4-6",
-        "fallback": ["gpt-5.4", "deepseek-reasoner"]
-      }
-    }
+    ]
   }
 }
 ```
@@ -393,40 +396,20 @@ Different agents have different needs. A support bot answering FAQs does not nee
 ```json
 {
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "claude-sonnet-4-6"
-      }
-    },
-    "support": {
-      "models": {
-        "primary": "claude-haiku-3-5"
-      }
-    },
-    "coding": {
-      "models": {
-        "primary": "claude-opus-4-6"
-      }
-    },
-    "research": {
-      "models": {
-        "primary": "gpt-5.4"
-      }
-    },
-    "local-assistant": {
-      "models": {
-        "primary": "llama3.1:70b"
-      }
-    }
+    "list": [
+      { "id": "support", "name": "Support", "model": { "primary": "anthropic/claude-haiku-3-5" } },
+      { "id": "coding", "name": "Coding", "model": { "primary": "anthropic/claude-opus-4-6" } },
+      { "id": "research", "name": "Research", "model": { "primary": "openai/gpt-5.4" } },
+      { "id": "local-assistant", "name": "Local Assistant", "model": { "primary": "ollama/llama3.1:70b" } }
+    ]
   }
 }
 ```
 
 **How resolution works:**
 
-1. If the agent has an explicit model assignment, use it
-2. Otherwise, fall back to `agents.defaults.models.primary`
-3. If neither is set, OpenClaw uses the first provider's default model
+1. If the agent has an explicit `model.primary` assignment, use it
+2. Otherwise, OpenClaw uses the first provider's default model
 
 **Subagent model defaults:**
 
@@ -435,12 +418,13 @@ When an agent spawns subagents (in ClawTeam swarm mode), subagents inherit the p
 ```json
 {
   "agents": {
-    "coding": {
-      "models": {
-        "primary": "claude-opus-4-6",
-        "subagent": "claude-haiku-3-5"
+    "list": [
+      {
+        "id": "coding", "name": "Coding",
+        "model": { "primary": "anthropic/claude-opus-4-6" },
+        "subagents": { "model": "anthropic/claude-haiku-3-5" }
       }
-    }
+    ]
   }
 }
 ```
@@ -468,41 +452,46 @@ Tier 3 (Cheap, fast)              →  Subagents, simple tasks, fallbacks
   "models": {
     "providers": {
       "anthropic": {
-        "type": "anthropic",
+        "api": "anthropic-messages",
         "apiKey": "${ANTHROPIC_API_KEY}"
       },
       "openai": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${OPENAI_API_KEY}"
       },
       "deepseek": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${DEEPSEEK_API_KEY}",
         "baseUrl": "https://api.deepseek.com/v1"
       }
     }
   },
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "claude-sonnet-4-6",
-        "subagent": "claude-haiku-3-5",
-        "fallback": ["gpt-4.1", "deepseek-chat"]
+    "list": [
+      {
+        "id": "default", "name": "Default",
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-6",
+          "fallbacks": ["openai/gpt-4.1", "deepseek/deepseek-chat"]
+        },
+        "subagents": { "model": "anthropic/claude-haiku-3-5" }
+      },
+      {
+        "id": "coding", "name": "Coding",
+        "model": {
+          "primary": "anthropic/claude-opus-4-6",
+          "fallbacks": ["openai/gpt-5.4"]
+        },
+        "subagents": { "model": "anthropic/claude-sonnet-4-6" }
+      },
+      {
+        "id": "support", "name": "Support",
+        "model": {
+          "primary": "anthropic/claude-haiku-3-5",
+          "fallbacks": ["openai/gpt-4.1-mini", "deepseek/deepseek-chat"]
+        }
       }
-    },
-    "coding": {
-      "models": {
-        "primary": "claude-opus-4-6",
-        "subagent": "claude-sonnet-4-6",
-        "fallback": ["gpt-5.4"]
-      }
-    },
-    "support": {
-      "models": {
-        "primary": "claude-haiku-3-5",
-        "fallback": ["gpt-4.1-mini", "deepseek-chat"]
-      }
-    }
+    ]
   }
 }
 ```
@@ -561,69 +550,79 @@ Complete multi-provider `openclaw.json` with all features demonstrated:
   "models": {
     "providers": {
       "anthropic": {
-        "type": "anthropic",
+        "api": "anthropic-messages",
         "apiKey": "${ANTHROPIC_API_KEY}"
       },
       "openai": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${OPENAI_API_KEY}"
       },
       "minimax": {
-        "type": "anthropic",
-        "apiKey": "${MINIMAX_API_KEY}",
-        "baseUrl": "https://api.minimaxi.com/anthropic"
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "api": "anthropic-messages",
+        "authHeader": true,
+        "models": [
+          { "id": "MiniMax-M2.7", "name": "MiniMax M2.7", "contextWindow": 204800 }
+        ]
       },
       "moonshot": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${MOONSHOT_API_KEY}",
         "baseUrl": "https://api.moonshot.cn/v1"
       },
       "deepseek": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "${DEEPSEEK_API_KEY}",
         "baseUrl": "https://api.deepseek.com/v1"
       },
       "ollama": {
-        "type": "openai",
+        "api": "openai-chat",
         "apiKey": "ollama",
         "baseUrl": "http://localhost:11434/v1"
       }
     }
   },
   "agents": {
-    "defaults": {
-      "models": {
-        "primary": "claude-sonnet-4-6",
-        "subagent": "claude-haiku-3-5",
-        "fallback": ["gpt-4.1", "deepseek-chat"]
+    "list": [
+      {
+        "id": "default", "name": "Default",
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-6",
+          "fallbacks": ["openai/gpt-4.1", "deepseek/deepseek-chat"]
+        },
+        "subagents": { "model": "anthropic/claude-haiku-3-5" }
+      },
+      {
+        "id": "coding", "name": "Coding",
+        "model": {
+          "primary": "anthropic/claude-opus-4-6",
+          "fallbacks": ["openai/gpt-5.4", "deepseek/deepseek-reasoner"]
+        },
+        "subagents": { "model": "anthropic/claude-sonnet-4-6" }
+      },
+      {
+        "id": "support", "name": "Support",
+        "model": {
+          "primary": "anthropic/claude-haiku-3-5",
+          "fallbacks": ["openai/gpt-4.1-mini", "moonshot/moonshot-v1-8k"]
+        }
+      },
+      {
+        "id": "research", "name": "Research",
+        "model": {
+          "primary": "openai/gpt-5.4",
+          "fallbacks": ["anthropic/claude-sonnet-4-6", "moonshot/kimi-k2.5"]
+        },
+        "subagents": { "model": "openai/gpt-4.1-mini" }
+      },
+      {
+        "id": "local-private", "name": "Local Private",
+        "model": {
+          "primary": "ollama/llama3.1:70b",
+          "fallbacks": ["ollama/llama3.1:8b"]
+        }
       }
-    },
-    "coding": {
-      "models": {
-        "primary": "claude-opus-4-6",
-        "subagent": "claude-sonnet-4-6",
-        "fallback": ["gpt-5.4", "deepseek-reasoner"]
-      }
-    },
-    "support": {
-      "models": {
-        "primary": "claude-haiku-3-5",
-        "fallback": ["gpt-4.1-mini", "moonshot-v1-8k"]
-      }
-    },
-    "research": {
-      "models": {
-        "primary": "gpt-5.4",
-        "subagent": "gpt-4.1-mini",
-        "fallback": ["claude-sonnet-4-6", "kimi-k2.5"]
-      }
-    },
-    "local-private": {
-      "models": {
-        "primary": "llama3.1:70b",
-        "fallback": ["llama3.1:8b"]
-      }
-    }
+    ]
   }
 }
 ```
@@ -644,7 +643,7 @@ DEEPSEEK_API_KEY=sk-...
 After editing either file, restart the gateway:
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 ```
 
 ---
@@ -682,7 +681,7 @@ openclaw restart
 - Anthropic models: use exact names like `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-3-5`
 - OpenAI models: use `gpt-5.4`, `gpt-5.2`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`
 - Ollama models: use the exact tag you pulled, e.g., `llama3.1:70b` not `llama3.1`
-- MiniMax models: use the model name from MiniMax docs, e.g., `MiniMax-M1`
+- MiniMax models: use the model name from MiniMax docs, e.g., `MiniMax-M2.7`
 - Check for typos in `openclaw.json` -- model names are case-sensitive
 
 ### Rate limit errors (429)
@@ -716,7 +715,7 @@ ollama list
 **Cause:** The `fallback` array is misconfigured or the failing provider returns a non-retryable error.
 
 **Fix:**
-- Verify the fallback array is inside the correct agent's `models` block
+- Verify the `fallbacks` array is inside the correct agent's `model` block
 - Check that fallback model names are valid and their providers are configured
 - Check OpenClaw logs for the specific error:
   ```bash

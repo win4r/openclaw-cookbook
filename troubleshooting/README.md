@@ -8,19 +8,19 @@ Common issues and their fixes, organized by symptom.
 
 ### Port already in use
 
-**Symptom:** `Error: listen EADDRINUSE :::3000`
+**Symptom:** `Error: listen EADDRINUSE :::18789`
 
 **Fix:**
 ```bash
 # Find what's using the port
-lsof -i :3000
+lsof -i :18789
 
 # Kill it, or change the port
 # In .env:
-OPENCLAW_PORT=3001
+OPENCLAW_PORT=18790
 
 # Or in openclaw.json:
-# "gateway": { "port": 3001 }
+# "gateway": { "port": 18790 }
 ```
 
 ### Missing dependencies
@@ -66,13 +66,17 @@ cp templates/.env.example .env
 
 **Fix:** Check openclaw.json:
 ```jsonc
-"plugins": {
+"channels": {
   "telegram": {
     "enabled": true,  // Must be true, not false
-    "botToken": "${TELEGRAM_BOT_TOKEN}",
-    "agent": "main"
+    "accounts": {
+      "main-bot": { "botToken": "${TELEGRAM_BOT_TOKEN}", "dmPolicy": "pairing" }
+    }
   }
-}
+},
+"bindings": [
+  { "agentId": "main", "match": { "channel": "telegram", "accountId": "main-bot" } }
+]
 ```
 
 ### Wrong bot token
@@ -100,10 +104,10 @@ TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ
 
 **Symptom:** Plugin is enabled but logs show `No agent found for channel`.
 
-**Fix:** Verify the `agent` field matches an agent `id`:
+**Fix:** Verify the binding's `agentId` matches an agent `id`:
 ```jsonc
-// Plugin references agent "main"
-"telegram": { "agent": "main" }
+// Binding references agent "main"
+"bindings": [{ "agentId": "main", "match": { "channel": "telegram", "accountId": "main-bot" } }]
 
 // Agent list must contain id "main"
 "agents": { "list": [{ "id": "main", ... }] }
@@ -124,7 +128,7 @@ curl https://api.anthropic.com/v1/messages \
   -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "content-type: application/json" \
   -H "anthropic-version: 2023-06-01" \
-  -d '{"model":"claude-sonnet-4-20250514","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
+  -d '{"model":"claude-sonnet-4-6","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
 ```
 
 If the key is invalid, regenerate it from the provider's dashboard.
@@ -137,9 +141,9 @@ If the key is invalid, regenerate it from the provider's dashboard.
 - Wait and retry (automatic in most cases).
 - Configure a fallback model:
 ```jsonc
-"models": {
-  "default": "claude-sonnet-4-20250514",
-  "fallback": "gpt-4o"
+"model": {
+  "primary": "anthropic/claude-sonnet-4-6",
+  "fallbacks": ["openai/gpt-5.4"]
 }
 ```
 - Reduce request frequency (longer conversations = fewer API calls).
@@ -154,7 +158,8 @@ If the key is invalid, regenerate it from the provider's dashboard.
 - Verify the model is listed in your provider config:
 ```jsonc
 "anthropic": {
-  "models": ["claude-sonnet-4-20250514"]  // Exact ID required
+  "api": "anthropic",
+  "models": [{ "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" }]
 }
 ```
 - Check if your API key has access to that model (some models require specific tier access).
@@ -179,10 +184,23 @@ If the key is invalid, regenerate it from the provider's dashboard.
 **Fix:** Enable the plugin:
 ```jsonc
 "plugins": {
-  "memory-lancedb-pro": {
-    "enabled": true,
-    "jinaApiKey": "${JINA_API_KEY}",
-    "dbPath": "./data/memory-lancedb"
+  "allow": ["memory-lancedb-pro"],
+  "entries": {
+    "memory-lancedb-pro": {
+      "enabled": true,
+      "config": {
+        "embedding": {
+          "provider": "openai-compatible",
+          "apiKey": "${JINA_API_KEY}",
+          "model": "jina-embeddings-v5-text-small",
+          "baseURL": "https://api.jina.ai/v1",
+          "dimensions": 1024
+        },
+        "dbPath": "~/.openclaw/memory/lancedb-pro",
+        "autoCapture": true,
+        "autoRecall": true
+      }
+    }
   }
 }
 ```
@@ -197,7 +215,7 @@ If the key is invalid, regenerate it from the provider's dashboard.
 curl https://api.jina.ai/v1/embeddings \
   -H "Authorization: Bearer $JINA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"input":["test"],"model":"jina-embeddings-v3"}'
+  -d '{"input":["test"],"model":"jina-embeddings-v5-text-small"}'
 ```
 
 If invalid, get a new key at https://jina.ai/.
@@ -211,7 +229,7 @@ If invalid, get a new key at https://jina.ai/.
 - Try a broader query.
 - Check that `dbPath` exists and contains data files:
 ```bash
-ls -la data/memory-lancedb/
+ls -la ~/.openclaw/memory/lancedb-pro/
 ```
 
 ### Agent not using memory tools
@@ -307,7 +325,7 @@ time curl -s -o /dev/null https://api.anthropic.com/v1/messages
 **Symptom:** `memory_recall` takes several seconds.
 
 **Fixes:**
-- Reduce `embeddingDimensions` from 1024 to 512.
+- Reduce `embedding.dimensions` from 1024 to 512.
 - Ensure `dbPath` is on a local SSD, not a network mount.
 - Prune old entries to keep the index lean.
 
@@ -320,10 +338,10 @@ time curl -s -o /dev/null https://api.anthropic.com/v1/messages
 pgrep -f openclaw || echo "Not running"
 
 # Check the port
-lsof -i :3000
+lsof -i :18789
 
 # Health check
-curl -s http://localhost:3000/health | python3 -m json.tool
+curl -s http://localhost:18789/health | python3 -m json.tool
 
 # Recent logs (pm2)
 pm2 logs openclaw --lines 50
@@ -336,19 +354,19 @@ curl -s https://api.anthropic.com/v1/messages \
   -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "anthropic-version: 2023-06-01" \
   -H "content-type: application/json" \
-  -d '{"model":"claude-sonnet-4-20250514","max_tokens":5,"messages":[{"role":"user","content":"ping"}]}' \
+  -d '{"model":"claude-sonnet-4-6","max_tokens":5,"messages":[{"role":"user","content":"ping"}]}' \
   | python3 -m json.tool
 
 # Test Jina API key
 curl -s https://api.jina.ai/v1/embeddings \
   -H "Authorization: Bearer $JINA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"input":["test"],"model":"jina-embeddings-v3"}' \
+  -d '{"input":["test"],"model":"jina-embeddings-v5-text-small"}' \
   | python3 -m json.tool
 
 # Workspace token estimate
 wc -c workspace/*.md 2>/dev/null | tail -1 | awk '{print int($1/4), "estimated tokens"}'
 
 # LanceDB size
-du -sh data/memory-lancedb/ 2>/dev/null || echo "No LanceDB data found"
+du -sh ~/.openclaw/memory/lancedb-pro/ 2>/dev/null || echo "No LanceDB data found"
 ```

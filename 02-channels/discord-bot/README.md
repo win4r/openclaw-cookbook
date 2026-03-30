@@ -10,7 +10,7 @@ Connect your OpenClaw agent to Discord. The bot can respond in server channels, 
 
 ## Prerequisites
 
-- OpenClaw installed and running (`openclaw start` works)
+- OpenClaw installed and running (`openclaw gateway` works)
 - A Discord account
 - Admin access to a Discord server (or create a new one for testing)
 - At least one model provider configured
@@ -46,7 +46,7 @@ Under "OAuth2 > URL Generator":
 ## Step 2: Enable the Discord Plugin
 
 ```bash
-openclaw plugin enable discord
+openclaw plugins enable discord
 ```
 
 ---
@@ -54,15 +54,19 @@ openclaw plugin enable discord
 ## Step 3: Configure the Bot Token
 
 ```bash
-openclaw config set discord.bots.main.token "MTIzNDU2Nzg5MDEy..."
+openclaw config set channels.discord.accounts.main-bot.botToken "MTIzNDU2Nzg5MDEy..."
 ```
 
 ---
 
 ## Step 4: Bind the Bot to an Agent
 
-```bash
-openclaw config set discord.bots.main.agent "default"
+Add a binding in `openclaw.json`:
+
+```json
+"bindings": [
+  { "agentId": "default", "match": { "channel": "discord", "accountId": "main-bot" } }
+]
 ```
 
 ---
@@ -74,7 +78,7 @@ openclaw config set discord.bots.main.agent "default"
 Restrict which Discord channels the bot responds in:
 
 ```bash
-openclaw config set discord.policies.channelAllowlist '[1234567890123456789, 9876543210987654321]'
+openclaw config set channels.discord.policies.channelAllowlist '[1234567890123456789, 9876543210987654321]'
 ```
 
 To find a channel ID: enable Developer Mode in Discord settings (App Settings > Advanced > Developer Mode), then right-click a channel and select "Copy Channel ID".
@@ -86,7 +90,7 @@ If not set, the bot responds in all channels it has access to.
 Require users to have a specific Discord role to interact with the bot:
 
 ```bash
-openclaw config set discord.policies.requiredRole "AI Access"
+openclaw config set channels.discord.policies.requiredRole "AI Access"
 ```
 
 Users without this role are ignored. This is useful for premium tiers or internal-only bots.
@@ -96,7 +100,7 @@ Users without this role are ignored. This is useful for premium tiers or interna
 ## Step 6: Restart and Verify
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 openclaw logs | grep discord
 ```
 
@@ -119,20 +123,19 @@ You should see:
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "discord": {
-      "bots": {
-        "main": {
-          "token": "MTIzNDU2Nzg5MDEy...",
-          "agent": "default"
+      "enabled": true,
+      "accounts": {
+        "main-bot": {
+          "botToken": "${DISCORD_BOT_TOKEN}"
         }
-      },
-      "policies": {
-        "channelAllowlist": [1234567890123456789],
-        "requiredRole": null
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "discord", "accountId": "main-bot" } }
+  ]
 }
 ```
 
@@ -143,13 +146,19 @@ You should see:
 Run multiple Discord bots, each bound to a different agent. Each bot requires a separate Discord application:
 
 ```bash
-openclaw config set discord.bots.support.token "TOKEN_A"
-openclaw config set discord.bots.support.agent "support-agent"
+openclaw config set channels.discord.accounts.support-bot.botToken "TOKEN_A"
+openclaw config set channels.discord.accounts.creative-bot.botToken "TOKEN_B"
 
-openclaw config set discord.bots.creative.token "TOKEN_B"
-openclaw config set discord.bots.creative.agent "creative-agent"
+openclaw gateway --restart
+```
 
-openclaw restart
+Then add bindings in `openclaw.json`:
+
+```json
+"bindings": [
+  { "agentId": "support-agent", "match": { "channel": "discord", "accountId": "support-bot" } },
+  { "agentId": "creative-agent", "match": { "channel": "discord", "accountId": "creative-bot" } }
+]
 ```
 
 ---
@@ -182,11 +191,11 @@ Discord supports streaming -- the bot edits its message progressively as the age
 
 ### Bot not responding
 
-1. **Check the token.** Run `openclaw config get discord.bots.main.token`. If you regenerated the token in the Developer Portal, the old one is invalid.
+1. **Check the token.** Run `openclaw config get channels.discord.accounts.main-bot.botToken`. If you regenerated the token in the Developer Portal, the old one is invalid.
 2. **Check intents.** The "Message Content Intent" must be enabled in the Developer Portal under Bot > Privileged Gateway Intents. Without it, the bot receives no message text.
 3. **Check permissions.** The bot needs "Send Messages" and "Read Message History" in the channel. Check the channel's permission overwrites.
 4. **Check logs.** `openclaw logs | grep discord` -- look for `401` (bad token) or `DISALLOWED_INTENTS` (missing intents).
-5. **Restart.** Config changes require `openclaw restart`.
+5. **Restart.** Config changes require `openclaw gateway --restart`.
 
 ### Bot is online but ignores messages
 

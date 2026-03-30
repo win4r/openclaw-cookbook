@@ -79,25 +79,25 @@ openclaw --version
 
 ```bash
 # Initialize workspace
-openclaw init
+openclaw setup
 
 # Add your model provider key
 echo 'ANTHROPIC_API_KEY=sk-ant-...' >> ~/.openclaw/.env
 
 # Start the gateway
-openclaw start
+openclaw gateway
 ```
 
 ### Talk to It
 
 ```bash
 # CLI mode
-openclaw chat "What can you do?"
+openclaw message send "What can you do?"
 
 # Or connect a Telegram bot (see 02-channels/)
-openclaw plugin enable telegram
+openclaw plugins enable telegram
 openclaw config set telegram.bots.main.token "YOUR_BOT_TOKEN"
-openclaw restart
+openclaw gateway --restart
 ```
 
 That's it. Your private AI agent is running. Now make it useful — pick a module above or jump to a recipe below.
@@ -146,6 +146,7 @@ Before diving in, here are the building blocks:
 ├── USER.md          # What the agent knows about you
 ├── MEMORY.md        # Curated long-term notes
 ├── BOOT.md          # Startup health checks
+├── HEARTBEAT.md     # Periodic health checks (optional)
 ├── skills/          # Reusable skill definitions
 └── checklists/      # Pre-flight safety checks
 ```
@@ -166,12 +167,12 @@ Agent: "Researcher"  → Gemini      → Discord Bot
 
 ```bash
 # Built-in
-openclaw plugin enable telegram
-openclaw plugin enable memory-lancedb-pro
+openclaw plugins enable telegram
+openclaw plugins enable memory-lancedb-pro
 
 # Community (npm)
 npm install -g @tencent-weixin/openclaw-weixin
-openclaw plugin enable openclaw-weixin
+openclaw plugins enable openclaw-weixin
 ```
 
 ---

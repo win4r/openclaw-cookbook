@@ -87,22 +87,22 @@ Enable the Telegram plugin and set the bot token:
 
 ```bash
 # Enable the Telegram plugin
-openclaw plugin enable telegram
+openclaw plugins enable telegram
 
 # Set the bot token
-openclaw config set telegram.bots.main.token "7123456789:AAG-some-random-string-here"
+openclaw config set channels.telegram.accounts.personal-bot.botToken "7123456789:AAG-some-random-string-here"
 
-# Bind this bot to the default agent
-openclaw config set telegram.bots.main.agent "default"
+# Set the DM policy
+openclaw config set channels.telegram.dmPolicy "pairing"
 ```
 
 Verify the configuration was saved:
 
 ```bash
-openclaw config get telegram
+openclaw config get channels.telegram
 ```
 
-You should see your token (partially masked) and the agent binding.
+You should see your token (partially masked) and the channel configuration.
 
 ---
 
@@ -217,37 +217,34 @@ Memory lets the agent remember facts across conversations. Without it, every con
 
 ```bash
 # Enable the memory plugin
-openclaw plugin enable memory-lancedb-pro
+openclaw plugins enable memory-lancedb-pro
 
 # Verify it is enabled
-openclaw plugin list
+openclaw plugins list
 ```
 
-Memory uses LanceDB for vector storage and Jina embeddings for semantic search. No external database or API key is needed -- it runs locally.
+Memory uses LanceDB for vector storage and Jina embeddings for semantic search. A Jina API key is required for embeddings -- add it to `~/.openclaw/.env`:
+
+```bash
+# Add your Jina API key (get one free at https://jina.ai/)
+echo 'JINA_API_KEY=your-jina-api-key-here' >> ~/.openclaw/.env
+```
 
 How it works:
 
-1. During conversation, the agent extracts important facts from your messages
-2. Facts are embedded and stored in a local LanceDB database at `~/.openclaw/memory/`
+1. During conversation, the agent automatically captures important facts from your messages
+2. Facts are embedded using Jina and stored in a local LanceDB database at `~/.openclaw/memory/lancedb-pro`
 3. On each new message, the agent searches memory for relevant past facts
 4. Retrieved facts are injected into the context so the agent can reference them
-
-You can configure memory behavior in the config:
-
-```bash
-# Optional: tune memory settings
-openclaw config set memory.autoExtract true
-openclaw config set memory.maxRecallResults 10
-```
 
 To verify memory is working after setup:
 
 ```bash
 # Tell your bot a fact (via Telegram or CLI)
-openclaw chat "My favorite programming language is Rust."
+openclaw message send "My favorite programming language is Rust."
 
 # Later, ask about it
-openclaw chat "What's my favorite programming language?"
+openclaw message send "What's my favorite programming language?"
 # Should respond: Rust
 ```
 
@@ -257,12 +254,9 @@ openclaw chat "What's my favorite programming language?"
 
 Web search lets the agent find current information instead of relying only on its training data.
 
-```bash
-# Enable web search tool
-openclaw config set tools.web_search.enabled true
-```
+Web search is included when you use `tools.profile: "full"` in your agent config (see the Complete Configuration section below). The agent decides when to search based on the question. You can also explicitly ask: "Search the web for..." to force a search.
 
-No additional API key is needed -- OpenClaw uses a built-in search provider. The agent decides when to search based on the question. You can also explicitly ask: "Search the web for..." to force a search.
+No additional API key is needed for web search -- OpenClaw uses a built-in search provider.
 
 ---
 
@@ -274,10 +268,10 @@ Configure the access policy:
 
 ```bash
 # Require pairing (default, but be explicit)
-openclaw config set telegram.policies.pairingRequired true
+openclaw config set channels.telegram.dmPolicy "pairing"
 
 # Optional: disable group chat (DMs only)
-openclaw config set telegram.policies.allowGroups false
+openclaw config set channels.telegram.groupPolicy "none"
 ```
 
 ### How Pairing Works
@@ -285,7 +279,7 @@ openclaw config set telegram.policies.allowGroups false
 1. Someone sends a message to your bot on Telegram
 2. The bot responds asking them to request pairing
 3. You (the admin) see the pairing request in your OpenClaw terminal
-4. You approve or deny via `openclaw telegram:pair approve <user_id>`
+4. You approve or deny via `openclaw pairing approve <user_id>`
 
 Since this is a personal bot, the first user you pair will be yourself. After that, you can leave pairing required and simply never approve anyone else.
 
@@ -295,13 +289,13 @@ The fastest way to pair yourself:
 
 ```bash
 # Restart the gateway to pick up all changes
-openclaw restart
+openclaw gateway --restart
 
 # Open Telegram and send any message to your bot
 # You will see a pairing request in the terminal
 
 # Approve it
-openclaw telegram:pair approve <your_telegram_user_id>
+openclaw pairing approve <your_telegram_user_id>
 ```
 
 After approval, your bot responds to your messages. All other users are blocked.
@@ -313,7 +307,7 @@ After approval, your bot responds to your messages. All other users are blocked.
 Restart the gateway to pick up all configuration changes:
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 ```
 
 ### Verification Checklist
@@ -321,7 +315,7 @@ openclaw restart
 Run through each of these to confirm your setup works end to end:
 
 - [ ] `openclaw status` shows the gateway is running
-- [ ] `openclaw plugin list` shows `telegram` and `memory-lancedb-pro` as enabled
+- [ ] `openclaw plugins list` shows `telegram` and `memory-lancedb-pro` as enabled
 - [ ] Send "Hello" to your bot on Telegram -- it responds
 - [ ] The response reflects the personality from SOUL.md (concise, direct, etc.)
 - [ ] Send "My birthday is March 15th" -- the bot acknowledges
@@ -340,33 +334,53 @@ Here is the full `openclaw.json` snippet for this recipe. You can also find it i
 ```json
 {
   "agents": {
-    "default": {
-      "model": "anthropic:claude-sonnet-4-20250514",
-      "workspace": "~/.openclaw/workspace"
-    }
-  },
-  "plugins": {
-    "telegram": {
-      "bots": {
-        "main": {
-          "token": "YOUR_BOT_TOKEN_HERE",
-          "agent": "default"
-        }
-      },
-      "policies": {
-        "pairingRequired": true,
-        "allowGroups": false
-      }
+    "defaults": {
+      "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-5.4"] }
     },
-    "memory-lancedb-pro": {
+    "list": [
+      {
+        "id": "default",
+        "name": "Atlas",
+        "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-5.4"] },
+        "workspace": "~/.openclaw/workspace",
+        "tools": { "profile": "full" }
+      }
+    ]
+  },
+  "channels": {
+    "telegram": {
       "enabled": true,
-      "autoExtract": true,
-      "maxRecallResults": 10
+      "dmPolicy": "pairing",
+      "groupPolicy": "none",
+      "accounts": {
+        "personal-bot": {
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "pairing"
+        }
+      }
     }
   },
-  "tools": {
-    "web_search": {
-      "enabled": true
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "telegram", "accountId": "personal-bot" } }
+  ],
+  "plugins": {
+    "allow": ["telegram", "memory-lancedb-pro"],
+    "entries": {
+      "memory-lancedb-pro": {
+        "enabled": true,
+        "config": {
+          "embedding": {
+            "provider": "openai-compatible",
+            "apiKey": "${JINA_API_KEY}",
+            "model": "jina-embeddings-v5-text-small",
+            "baseURL": "https://api.jina.ai/v1",
+            "dimensions": 1024
+          },
+          "dbPath": "~/.openclaw/memory/lancedb-pro",
+          "autoCapture": true,
+          "autoRecall": true
+        }
+      }
     }
   }
 }
@@ -398,10 +412,10 @@ Swap the model provider without changing anything else:
 
 ```bash
 # Use GPT instead of Claude
-openclaw config set agents.default.model "openai:gpt-4o"
+openclaw config set agents.defaults.model.primary "openai/gpt-5.4"
 
 # Use a local Ollama model (free, fully private)
-openclaw config set agents.default.model "ollama:llama3"
+openclaw config set agents.defaults.model.primary "ollama/llama3"
 ```
 
 ### Add Skills
@@ -426,25 +440,19 @@ When the user asks to translate text:
 
 ### Add More Tools
 
-Enable shell command execution for power-user tasks:
-
-```bash
-openclaw config set tools.exec.enabled true
-openclaw config set tools.exec.allowlist '["ls", "date", "curl", "python3"]'
-```
-
-**Warning:** The exec tool runs real commands on your machine. Always use an allowlist to restrict what commands the agent can run.
+Tools are configured at the agent level via the `tools.profile` field. The `"full"` profile includes web search, code execution, and other capabilities. See the Complete Configuration section above for the correct structure.
 
 ### Connect to Additional Channels
 
 Your agent can be available on Telegram and Discord simultaneously:
 
 ```bash
-openclaw plugin enable discord
-openclaw config set discord.bots.main.token "YOUR_DISCORD_TOKEN"
-openclaw config set discord.bots.main.agent "default"
-openclaw restart
+openclaw plugins enable discord
+openclaw config set channels.discord.accounts.main.botToken "YOUR_DISCORD_TOKEN"
+openclaw gateway --restart
 ```
+
+Then add a binding in your config to route the Discord channel to your agent.
 
 Both channels share the same agent, memory, and personality.
 
@@ -456,19 +464,19 @@ Both channels share the same agent, memory, and personality.
 
 1. Check `openclaw status` -- the gateway must be running
 2. Check `openclaw logs` for errors
-3. Verify your bot token is correct: `openclaw config get telegram.bots.main.token`
+3. Verify your bot token is correct: `openclaw config get channels.telegram.accounts.personal-bot.botToken`
 4. Make sure you have paired yourself (see Step 8)
 
 ### Memory does not recall facts
 
-1. Check that `memory-lancedb-pro` is enabled: `openclaw plugin list`
+1. Check that `memory-lancedb-pro` is enabled: `openclaw plugins list`
 2. After telling the bot a fact, wait a few seconds before asking about it (embedding takes a moment)
-3. Check `~/.openclaw/memory/` exists and contains data files
-4. Try `openclaw chat "Recall everything you know about me"` to see what is stored
+3. Check `~/.openclaw/memory/lancedb-pro` exists and contains data files
+4. Try `openclaw message send "Recall everything you know about me"` to see what is stored
 
 ### Web search returns no results
 
-1. Check that `tools.web_search.enabled` is true: `openclaw config get tools.web_search`
+1. Check that the agent's `tools.profile` is set to `"full"`: `openclaw config get agents`
 2. Ensure your machine has internet access
 3. Some queries work better with explicit phrasing: "Search for X" instead of just asking
 
@@ -476,7 +484,7 @@ Both channels share the same agent, memory, and personality.
 
 1. Check the file is at `~/.openclaw/workspace/SOUL.md` (not a subdirectory)
 2. The gateway reads workspace files on each request -- no restart needed for SOUL.md changes
-3. Check `openclaw config get agents.default.workspace` points to the right directory
+3. Check that your agent's workspace config points to the right directory
 
 ---
 

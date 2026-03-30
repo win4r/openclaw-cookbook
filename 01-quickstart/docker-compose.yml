@@ -15,8 +15,8 @@ services:
     working_dir: /app
     command: >
       sh -c "npm install -g openclaw &&
-             openclaw init --defaults --skip-if-exists &&
-             openclaw start --no-daemon"
+             openclaw setup --defaults --skip-if-exists &&
+             openclaw gateway"
     ports:
       - "18789:18789"
     volumes:

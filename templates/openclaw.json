@@ -8,18 +8,20 @@
   // ---------------------------------------------------------------------------
   "gateway": {
     // Port the HTTP gateway listens on.
-    "port": 3000,
+    "port": 18789,
 
     // Operating mode:
-    //   "single"  — one user, no auth required (local dev)
-    //   "multi"   — multiple users, auth enforced
-    "mode": "single",
+    //   "local"  — local usage, simplified auth
+    "mode": "local",
 
-    // Authentication token for API access.
-    // In single mode this is optional; in multi mode it is required.
-    // Best practice: set via OPENCLAW_AUTH_TOKEN env var instead of hardcoding.
+    // Bind address:
+    //   "loopback" — only accept connections from localhost
+    "bind": "loopback",
+
+    // Authentication for API access.
     "auth": {
-      "token": "${OPENCLAW_AUTH_TOKEN}"
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   },
 
@@ -30,28 +32,31 @@
     "providers": {
       // Anthropic (Claude)
       "anthropic": {
-        // Set via ANTHROPIC_API_KEY env var.
-        "apiKey": "${ANTHROPIC_API_KEY}",
+        // Set ANTHROPIC_API_KEY via env var.
         "models": [
-          "claude-sonnet-4-20250514",
-          "claude-opus-4-20250514",
-          "claude-haiku-4-20250514"
+          { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6" },
+          { "id": "claude-opus-4-6", "name": "Claude Opus 4.6" }
         ]
       },
 
       // OpenAI
       "openai": {
-        // Set via OPENAI_API_KEY env var.
-        "apiKey": "${OPENAI_API_KEY}",
+        // Set OPENAI_API_KEY via env var.
         "models": [
-          "gpt-4o",
-          "gpt-4o-mini"
+          { "id": "gpt-5.4", "name": "GPT 5.4" },
+          { "id": "gpt-4o", "name": "GPT 4o" }
         ]
       }
 
-      // Add more providers as needed:
-      // "google": { "apiKey": "${GOOGLE_API_KEY}", "models": ["gemini-2.0-flash"] }
-      // "deepseek": { "apiKey": "${DEEPSEEK_API_KEY}", "models": ["deepseek-chat"] }
+      // MiniMax (Anthropic-compatible)
+      // "minimax": {
+      //   "baseUrl": "https://api.minimaxi.com/anthropic",
+      //   "api": "anthropic-messages",
+      //   "authHeader": true,
+      //   "models": [
+      //     { "id": "MiniMax-M2.7", "name": "MiniMax M2.7" }
+      //   ]
+      // }
     }
   },
 
@@ -61,76 +66,117 @@
   "agents": {
     // Default model settings applied to all agents unless overridden.
     "defaults": {
-      "models": {
-        // Primary model used for responses.
-        "default": "claude-sonnet-4-20250514",
+      "model": {
+        // Primary model used for responses (provider/model format).
+        "primary": "anthropic/claude-sonnet-4-6",
 
-        // Fallback if the primary is unavailable or rate-limited.
-        "fallback": "gpt-4o"
+        // Fallback models if the primary is unavailable or rate-limited.
+        "fallbacks": ["openai/gpt-5.4"]
       }
     },
 
     // Agent list. Each agent has its own workspace directory and config.
     "list": [
       {
-        // Unique identifier. Referenced by channel routing.
+        // Unique identifier. Referenced by channel routing via bindings.
         "id": "main",
 
         // Human-readable name.
-        "name": "Main Assistant",
+        "name": "Assistant",
+
+        // Identity metadata.
+        "identity": {
+          "name": "Assistant"
+        },
+
+        // Override default model for this agent (optional).
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-6",
+          "fallbacks": ["openai/gpt-5.4"]
+        },
 
         // Path to this agent's workspace directory (relative to project root).
         // Contains SOUL.md, AGENTS.md, TOOLS.md, etc.
-        "workspace": "./workspace",
-
-        // Override default models for this agent (optional).
-        "models": {
-          "default": "claude-sonnet-4-20250514"
-        }
+        "workspace": "./workspace"
       }
 
       // Add more agents for specialization:
       // {
       //   "id": "coding",
       //   "name": "Coding Assistant",
-      //   "workspace": "./workspace-coding",
-      //   "models": { "default": "claude-opus-4-20250514" }
+      //   "identity": { "name": "Coding Assistant" },
+      //   "model": { "primary": "anthropic/claude-opus-4-6", "fallbacks": ["openai/gpt-5.4"] },
+      //   "workspace": "./workspace-coding"
       // },
       // {
       //   "id": "support",
       //   "name": "Customer Support",
-      //   "workspace": "./workspace-support",
-      //   "models": { "default": "claude-haiku-4-20250514" }
+      //   "identity": { "name": "Customer Support" },
+      //   "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-4o"] },
+      //   "workspace": "./workspace-support"
       // }
     ]
   },
 
   // ---------------------------------------------------------------------------
-  // Plugins — enable and configure channel integrations and tools
+  // Channels — messaging platform integrations
   // ---------------------------------------------------------------------------
-  "plugins": {
-    // Telegram bot integration.
+  "channels": {
+    // Telegram channel integration.
     "telegram": {
       "enabled": false,
-      // Bot token from @BotFather. Set via TELEGRAM_BOT_TOKEN env var.
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      // Route Telegram messages to a specific agent.
-      "agent": "main"
-    },
-
-    // Long-term memory via LanceDB vector store.
-    "memory-lancedb-pro": {
-      "enabled": false,
-      // Jina embeddings API key for vector encoding.
-      // Set via JINA_API_KEY env var.
-      "jinaApiKey": "${JINA_API_KEY}",
-      // Directory for the LanceDB database files.
-      "dbPath": "./data/memory-lancedb"
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "accounts": {
+        "main-bot": {
+          // Bot token from @BotFather. Set via TELEGRAM_BOT_TOKEN env var.
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "pairing",
+          "groupPolicy": "allowlist"
+        }
+      }
     }
 
-    // Other plugins:
-    // "discord": { "enabled": false, "botToken": "${DISCORD_BOT_TOKEN}", "agent": "main" }
-    // "slack":   { "enabled": false, "botToken": "${SLACK_BOT_TOKEN}", "agent": "main" }
-    // "whatsapp": { "enabled": false, "agent": "main" }
+    // Other channels:
+    // "discord": { "enabled": false, "accounts": { ... } }
+    // "slack":   { "enabled": false, "accounts": { ... } }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Bindings — route channels to agents
+  // ---------------------------------------------------------------------------
+  "bindings": [
+    { "agentId": "main", "match": { "channel": "telegram", "accountId": "main-bot" } }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Plugins — enable and configure extensions
+  // ---------------------------------------------------------------------------
+  "plugins": {
+    // Allowlist of enabled plugins.
+    "allow": ["telegram", "memory-lancedb-pro"],
+
+    // Plugin-specific configuration.
+    "entries": {
+      // Long-term memory via LanceDB vector store.
+      "memory-lancedb-pro": {
+        "enabled": false,
+        "config": {
+          "embedding": {
+            "provider": "openai-compatible",
+            // Jina embeddings API key. Set via JINA_API_KEY env var.
+            "apiKey": "${JINA_API_KEY}",
+            "model": "jina-embeddings-v5-text-small",
+            "baseURL": "https://api.jina.ai/v1",
+            "dimensions": 1024
+          },
+          // Directory for the LanceDB database files.
+          "dbPath": "~/.openclaw/memory/lancedb-pro",
+          "autoCapture": true,
+          "autoRecall": true
+        }
+      }
+    }
   }
 }

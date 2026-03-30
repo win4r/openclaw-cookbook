@@ -10,7 +10,7 @@ Connect your OpenClaw agent to a Slack workspace. Users interact with the bot vi
 
 ## Prerequisites
 
-- OpenClaw installed and running (`openclaw start` works)
+- OpenClaw installed and running (`openclaw gateway` works)
 - Admin access to a Slack workspace (or create a free one for testing)
 - A publicly accessible URL for your OpenClaw instance (Slack uses webhooks, not polling). If running locally, use a tunnel like `ngrok` or `cloudflared`.
 - At least one model provider configured
@@ -66,7 +66,7 @@ Go to "Install App" and click "Install to Workspace". Authorize the requested pe
 ## Step 2: Enable the Slack Plugin
 
 ```bash
-openclaw plugin enable slack
+openclaw plugins enable slack
 ```
 
 ---
@@ -75,10 +75,10 @@ openclaw plugin enable slack
 
 ```bash
 # Bot token (from Install App page)
-openclaw config set slack.token "xoxb-your-bot-token-here"
+openclaw config set channels.slack.accounts.main-app.botToken "xoxb-your-bot-token-here"
 
 # Signing secret (from Basic Information > App Credentials)
-openclaw config set slack.signingSecret "a1b2c3d4e5f6g7h8i9j0..."
+openclaw config set channels.slack.accounts.main-app.signingSecret "a1b2c3d4e5f6g7h8i9j0..."
 ```
 
 The signing secret verifies that incoming webhooks are genuinely from Slack.
@@ -87,8 +87,12 @@ The signing secret verifies that incoming webhooks are genuinely from Slack.
 
 ## Step 4: Bind to an Agent
 
-```bash
-openclaw config set slack.agent "default"
+Add a binding in `openclaw.json`:
+
+```json
+"bindings": [
+  { "agentId": "default", "match": { "channel": "slack", "accountId": "main-app" } }
+]
 ```
 
 ---
@@ -100,7 +104,7 @@ openclaw config set slack.agent "default"
 Restrict which Slack channels the bot responds in:
 
 ```bash
-openclaw config set slack.policies.channelAllowlist '["C0123456789", "C9876543210"]'
+openclaw config set channels.slack.policies.channelAllowlist '["C0123456789", "C9876543210"]'
 ```
 
 To find a channel ID: right-click the channel name in Slack, select "View channel details", and scroll to the bottom.
@@ -110,7 +114,7 @@ To find a channel ID: right-click the channel name in Slack, select "View channe
 Restrict which users can interact with the bot:
 
 ```bash
-openclaw config set slack.policies.userAllowlist '["U0123456789", "U9876543210"]'
+openclaw config set channels.slack.policies.userAllowlist '["U0123456789", "U9876543210"]'
 ```
 
 If neither allowlist is set, the bot responds to all users in all channels it has access to.
@@ -120,7 +124,7 @@ If neither allowlist is set, the bot responds to all users in all channels it ha
 ## Step 6: Restart and Verify
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 openclaw logs | grep slack
 ```
 
@@ -145,17 +149,20 @@ Verify the webhook is reachable by going to your Slack app's "Event Subscription
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "slack": {
-      "token": "xoxb-your-bot-token-here",
-      "signingSecret": "a1b2c3d4e5f6g7h8i9j0...",
-      "agent": "default",
-      "policies": {
-        "channelAllowlist": ["C0123456789"],
-        "userAllowlist": null
+      "enabled": true,
+      "accounts": {
+        "main-app": {
+          "botToken": "${SLACK_BOT_TOKEN}",
+          "signingSecret": "${SLACK_SIGNING_SECRET}"
+        }
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "slack", "accountId": "main-app" } }
+  ]
 }
 ```
 
@@ -169,10 +176,10 @@ Unlike Telegram and Discord (which use polling), Slack uses webhooks. This means
 
 ```bash
 # Using ngrok
-ngrok http 3000
+ngrok http 18789
 
 # Using cloudflared
-cloudflared tunnel --url http://localhost:3000
+cloudflared tunnel --url http://localhost:18789
 ```
 
 Then set the tunnel's public URL as your Slack app's Request URL. Update it each time the tunnel restarts (unless you use a fixed subdomain).
@@ -199,8 +206,8 @@ To add slash commands (e.g., `/ask What is the weather?`):
 4. Save and reinstall the app to your workspace
 
 ```bash
-openclaw config set slack.commands.enabled true
-openclaw restart
+openclaw config set channels.slack.commands.enabled true
+openclaw gateway --restart
 ```
 
 ---
@@ -220,10 +227,10 @@ openclaw restart
 ### Bot not responding
 
 1. **Check webhook connectivity.** In Slack app settings, "Event Subscriptions" should show a green checkmark next to the URL. If it shows an error, your URL is not reachable.
-2. **Check the token.** Run `openclaw config get slack.token`. Verify it starts with `xoxb-`.
+2. **Check the token.** Run `openclaw config get channels.slack.accounts.main-app.botToken`. Verify it starts with `xoxb-`.
 3. **Check the signing secret.** A wrong signing secret causes all incoming events to be rejected. Check `openclaw logs` for `Invalid signature` errors.
 4. **Check event subscriptions.** Make sure `message.im` and/or `app_mention` are listed under "Subscribe to bot events".
-5. **Restart.** Config changes require `openclaw restart`.
+5. **Restart.** Config changes require `openclaw gateway --restart`.
 
 ### Bot only responds in DMs, not channels
 

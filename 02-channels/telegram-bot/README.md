@@ -8,7 +8,7 @@ Connect your OpenClaw agent to Telegram. Users can message your bot in DMs or ad
 
 ## Prerequisites
 
-- OpenClaw installed and running (`openclaw start` works)
+- OpenClaw installed and running (`openclaw gateway` works)
 - A Telegram account
 - At least one model provider configured (e.g., `ANTHROPIC_API_KEY` in `~/.openclaw/.env`)
 
@@ -34,7 +34,7 @@ Optional BotFather settings (send these commands to BotFather):
 ## Step 2: Enable the Telegram Plugin
 
 ```bash
-openclaw plugin enable telegram
+openclaw plugins enable telegram
 ```
 
 This registers the Telegram channel. No restart needed yet.
@@ -44,19 +44,21 @@ This registers the Telegram channel. No restart needed yet.
 ## Step 3: Configure the Bot Token
 
 ```bash
-openclaw config set telegram.bots.main.token "7123456789:AAH1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6"
+openclaw config set channels.telegram.accounts.main-bot.botToken "7123456789:AAH1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6"
 ```
 
-This writes the token to `openclaw.json` under `plugins.telegram.bots.main.token`.
+This writes the token to `openclaw.json` under `channels.telegram.accounts.main-bot.botToken`.
 
 ---
 
 ## Step 4: Bind the Bot to an Agent
 
-By default, the bot uses the `default` agent. To use a specific agent:
+By default, the bot uses the `default` agent. To use a specific agent, add a binding in `openclaw.json`:
 
-```bash
-openclaw config set telegram.bots.main.agent "my-agent"
+```json
+"bindings": [
+  { "agentId": "my-agent", "match": { "channel": "telegram", "accountId": "main-bot" } }
+]
 ```
 
 If you only have one agent and have not configured `AGENTS.md` beyond the default, skip this step.
@@ -66,7 +68,7 @@ If you only have one agent and have not configured `AGENTS.md` beyond the defaul
 ## Step 5: Restart and Verify
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 ```
 
 Check the logs for a successful Telegram connection:
@@ -99,8 +101,8 @@ If the bot does not respond, see [Troubleshooting](#troubleshooting) below.
 By default, anyone who finds your bot can message it. To restrict DM access, enable pairing:
 
 ```bash
-openclaw config set telegram.policies.pairingRequired true
-openclaw restart
+openclaw config set channels.telegram.dmPolicy "pairing"
+openclaw gateway --restart
 ```
 
 With pairing enabled:
@@ -112,13 +114,13 @@ With pairing enabled:
 To approve a pending pairing:
 
 ```bash
-openclaw telegram approve <user_id>
+openclaw pairing approve <user_id>
 ```
 
 To list pending pairings:
 
 ```bash
-openclaw telegram pairings
+openclaw pairing list
 ```
 
 Pairing records are stored in `~/.openclaw/telegram/pairings.json`.
@@ -129,8 +131,8 @@ To control which Telegram groups the bot responds in:
 
 ```bash
 # Add a group to the allowlist (use the group's chat ID)
-openclaw config set telegram.policies.groupAllowlist '[-1001234567890, -1009876543210]'
-openclaw restart
+openclaw config set channels.telegram.groupPolicy "allowlist"
+openclaw gateway --restart
 ```
 
 To find a group's chat ID:
@@ -148,20 +150,24 @@ Complete `openclaw.json` example with Telegram configured:
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "telegram": {
-      "bots": {
-        "main": {
-          "token": "7123456789:AAH1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6",
-          "agent": "default"
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "accounts": {
+        "main-bot": {
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "pairing",
+          "groupPolicy": "allowlist"
         }
-      },
-      "policies": {
-        "pairingRequired": true,
-        "groupAllowlist": [-1001234567890]
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "default", "match": { "channel": "telegram", "accountId": "main-bot" } }
+  ]
 }
 ```
 
@@ -173,37 +179,36 @@ You can run multiple Telegram bots, each bound to a different agent:
 
 ```bash
 # Support bot
-openclaw config set telegram.bots.support.token "TOKEN_A"
-openclaw config set telegram.bots.support.agent "support-agent"
+openclaw config set channels.telegram.accounts.support-bot.botToken "TOKEN_A"
 
 # Code review bot
-openclaw config set telegram.bots.coder.token "TOKEN_B"
-openclaw config set telegram.bots.coder.agent "code-agent"
+openclaw config set channels.telegram.accounts.coder-bot.botToken "TOKEN_B"
 
-openclaw restart
+openclaw gateway --restart
 ```
 
 This produces a config like:
 
 ```json
 {
-  "plugins": {
+  "channels": {
     "telegram": {
-      "bots": {
-        "support": {
-          "token": "TOKEN_A",
-          "agent": "support-agent"
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "accounts": {
+        "support-bot": {
+          "botToken": "TOKEN_A"
         },
-        "coder": {
-          "token": "TOKEN_B",
-          "agent": "code-agent"
+        "coder-bot": {
+          "botToken": "TOKEN_B"
         }
-      },
-      "policies": {
-        "pairingRequired": true
       }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "support-agent", "match": { "channel": "telegram", "accountId": "support-bot" } },
+    { "agentId": "code-agent", "match": { "channel": "telegram", "accountId": "coder-bot" } }
+  ]
 }
 ```
 
@@ -238,17 +243,17 @@ This directory is created automatically. You can delete it to reset all Telegram
 
 ### Bot not responding
 
-1. **Check the token.** Run `openclaw config get telegram.bots.main.token` and verify it matches BotFather.
+1. **Check the token.** Run `openclaw config get channels.telegram.accounts.main-bot.botToken` and verify it matches BotFather.
 2. **Check the logs.** Run `openclaw logs | grep telegram` and look for errors. Common errors:
    - `401 Unauthorized` -- token is wrong or revoked. Get a new one from BotFather.
    - `409 Conflict` -- another process is polling with the same token. Stop any other bots using this token (including BotFather's built-in test).
-3. **Check the plugin is enabled.** Run `openclaw plugin list` and confirm telegram is listed.
-4. **Restart.** Run `openclaw restart` -- config changes require a restart.
+3. **Check the plugin is enabled.** Run `openclaw plugins list` and confirm telegram is listed.
+4. **Restart.** Run `openclaw gateway --restart` -- config changes require a restart.
 
 ### Pairing issues
 
-1. **User says they never got a pairing prompt.** Check that `pairingRequired` is `true` in config. If it was just enabled, restart.
-2. **Approved user still cannot chat.** Check `~/.openclaw/telegram/pairings.json` for their user ID. If their entry shows `"status": "pending"`, approve it with `openclaw telegram approve <user_id>`.
+1. **User says they never got a pairing prompt.** Check that `dmPolicy` is `"pairing"` in config. If it was just enabled, restart.
+2. **Approved user still cannot chat.** Check `~/.openclaw/telegram/pairings.json` for their user ID. If their entry shows `"status": "pending"`, approve it with `openclaw pairing approve <user_id>`.
 3. **Cannot find user ID.** Ask the user to send any message to the bot, then check `openclaw logs` -- the user ID appears in the log entry.
 
 ### Group permissions

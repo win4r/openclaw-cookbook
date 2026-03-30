@@ -102,9 +102,11 @@ In multi-user mode, all API requests to the gateway require an auth token:
 ```jsonc
 {
   "gateway": {
-    "mode": "multi",
+    "port": 18789,
+    "mode": "local",
     "auth": {
-      "token": "${OPENCLAW_AUTH_TOKEN}"
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   }
 }
@@ -119,14 +121,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Requests must include the token in the `Authorization` header:
 
 ```bash
-curl -H "Authorization: Bearer $OPENCLAW_AUTH_TOKEN" http://localhost:3000/api/chat
+curl -H "Authorization: Bearer $OPENCLAW_GATEWAY_TOKEN" http://localhost:18789/api/chat
 ```
 
 ### Single mode considerations
 
 In single mode, auth is disabled. This is fine for local development but must never be used when the gateway is exposed to a network.
 
-**Rule: If the gateway port is reachable from outside localhost, enable multi mode with auth.**
+**Rule: If the gateway port is reachable from outside localhost, enable auth with a strong token.**
 
 ## Channel Access Control
 
@@ -170,7 +172,7 @@ Workspace files (SOUL.md, AGENTS.md, etc.) are read by the LLM. Assume their con
 
 Before deploying to production:
 
-- [ ] Gateway mode set to `multi` with a strong auth token
+- [ ] Gateway auth enabled with `"mode": "token"` and a strong token
 - [ ] Exec approvals in `allowlist` mode with `"default": "deny"`
 - [ ] SOUL.md includes prompt leak prevention and jailbreak resistance
 - [ ] AGENTS.md includes tool output safety rules

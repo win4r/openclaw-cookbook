@@ -20,34 +20,35 @@ Each agent is an entry in `agents.list`:
 {
   "agents": {
     "defaults": {
-      "models": {
-        "default": "claude-sonnet-4-20250514",
-        "fallback": "gpt-4o"
-      }
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-6",
+        "fallbacks": ["openai/gpt-5.4"]
+      },
+      "subagents": { "model": "anthropic/claude-haiku-4-5" }
     },
     "list": [
       {
         "id": "coding",
         "name": "Coding Assistant",
         "workspace": "./workspace-coding",
-        "models": {
-          "default": "claude-opus-4-20250514"
+        "model": {
+          "primary": "anthropic/claude-opus-4-6"
         }
       },
       {
         "id": "support",
         "name": "Support Bot",
         "workspace": "./workspace-support",
-        "models": {
-          "default": "claude-haiku-4-20250514"
+        "model": {
+          "primary": "anthropic/claude-haiku-4-5"
         }
       },
       {
         "id": "research",
         "name": "Research Agent",
         "workspace": "./workspace-research",
-        "models": {
-          "default": "claude-sonnet-4-20250514"
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-6"
         }
       }
     ]
@@ -58,8 +59,8 @@ Each agent is an entry in `agents.list`:
 Key points:
 - `id` is the routing key referenced by plugins and channels.
 - `workspace` points to a directory containing that agent's persona files.
-- `models` overrides the defaults for this specific agent.
-- Agents that omit `models` inherit from `agents.defaults`.
+- `model` overrides the defaults for this specific agent.
+- Agents that omit `model` inherit from `agents.defaults`.
 
 ## Per-Agent Workspaces
 
@@ -93,29 +94,35 @@ Each workspace is fully independent. Changes to the coding agent's SOUL.md do no
 
 ## Agent Routing
 
-Channels are routed to agents via the `agent` field in plugin config:
+Channels are routed to agents via `bindings`:
 
 ```jsonc
 {
-  "plugins": {
+  "channels": {
     "telegram": {
       "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "agent": "support"
+      "accounts": {
+        "support-bot": { "botToken": "${TELEGRAM_BOT_TOKEN}", "dmPolicy": "pairing" }
+      }
     },
     "discord": {
       "enabled": true,
-      "botToken": "${DISCORD_BOT_TOKEN}",
-      "agent": "coding"
+      "accounts": {
+        "coding-bot": { "botToken": "${DISCORD_BOT_TOKEN}" }
+      }
     }
-  }
+  },
+  "bindings": [
+    { "agentId": "support", "match": { "channel": "telegram", "accountId": "support-bot" } },
+    { "agentId": "coding", "match": { "channel": "discord", "accountId": "coding-bot" } }
+  ]
 }
 ```
 
 Routing rules:
-- Each plugin instance maps to exactly one agent.
-- The CLI (`openclaw chat`) defaults to the first agent in the list unless `--agent <id>` is specified.
-- To route the same channel type to different agents, run multiple OpenClaw instances on different ports.
+- Each binding maps a channel account to exactly one agent.
+- The CLI (`openclaw message send`) defaults to the first agent in the list unless `--agent <id>` is specified.
+- To route the same channel type to different agents, create multiple accounts and bindings.
 
 ## ClawTeam Swarm Orchestration
 
@@ -144,9 +151,9 @@ from clawteam import Swarm, Agent
 
 swarm = Swarm(
     agents=[
-        Agent(id="leader", role="coordinator", model="claude-opus-4-20250514"),
-        Agent(id="coder", role="worker", model="claude-sonnet-4-20250514"),
-        Agent(id="reviewer", role="worker", model="claude-sonnet-4-20250514"),
+        Agent(id="leader", role="coordinator", model="claude-opus-4-6"),
+        Agent(id="coder", role="worker", model="claude-sonnet-4-6"),
+        Agent(id="reviewer", role="worker", model="claude-sonnet-4-6"),
     ],
     strategy="leader-workers"  # leader decomposes, workers execute
 )
@@ -211,5 +218,5 @@ graph TB
 
 - Start with one agent. Add more only when you have a clear reason (different channel, different cost tier, different security boundary).
 - Name workspaces descriptively: `workspace-coding`, `workspace-support`, not `workspace-2`.
-- Test each agent independently via CLI (`openclaw chat --agent coding`) before connecting channels.
+- Test each agent independently via CLI (`openclaw message send --agent coding "hello"`) before connecting channels.
 - Monitor per-agent costs separately to validate your cost optimization assumptions.

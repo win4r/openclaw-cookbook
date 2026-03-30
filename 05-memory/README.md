@@ -16,10 +16,23 @@ Both can be used simultaneously. MEMORY.md provides reliable baseline context; L
 ```jsonc
 {
   "plugins": {
-    "memory-lancedb-pro": {
-      "enabled": true,
-      "jinaApiKey": "${JINA_API_KEY}",
-      "dbPath": "./data/memory-lancedb"
+    "allow": ["memory-lancedb-pro"],
+    "entries": {
+      "memory-lancedb-pro": {
+        "enabled": true,
+        "config": {
+          "embedding": {
+            "provider": "openai-compatible",
+            "apiKey": "${JINA_API_KEY}",
+            "model": "jina-embeddings-v5-text-small",
+            "baseURL": "https://api.jina.ai/v1",
+            "dimensions": 1024
+          },
+          "dbPath": "~/.openclaw/memory/lancedb-pro",
+          "autoCapture": true,
+          "autoRecall": true
+        }
+      }
     }
   }
 }
@@ -39,27 +52,37 @@ Get a key at https://jina.ai/ (free tier available).
 ### 3. Verify it works
 
 ```bash
-openclaw chat
-> Remember that my preferred language is Python.
+openclaw message send "Remember that my preferred language is Python."
 # Agent should call memory_store
 
-> What is my preferred language?
+openclaw message send "What is my preferred language?"
 # Agent should call memory_recall and find "Python"
 ```
 
 ## Jina Embeddings Configuration
 
-The default embedding model is `jina-embeddings-v3`. Configuration options in openclaw.json:
+The default embedding model is `jina-embeddings-v5-text-small`. Configuration options are nested under `plugins.entries.memory-lancedb-pro.config`:
 
 ```jsonc
 {
   "plugins": {
-    "memory-lancedb-pro": {
-      "enabled": true,
-      "jinaApiKey": "${JINA_API_KEY}",
-      "dbPath": "./data/memory-lancedb",
-      "embeddingModel": "jina-embeddings-v3",
-      "embeddingDimensions": 1024
+    "allow": ["memory-lancedb-pro"],
+    "entries": {
+      "memory-lancedb-pro": {
+        "enabled": true,
+        "config": {
+          "embedding": {
+            "provider": "openai-compatible",
+            "apiKey": "${JINA_API_KEY}",
+            "model": "jina-embeddings-v5-text-small",
+            "baseURL": "https://api.jina.ai/v1",
+            "dimensions": 1024
+          },
+          "dbPath": "~/.openclaw/memory/lancedb-pro",
+          "autoCapture": true,
+          "autoRecall": true
+        }
+      }
     }
   }
 }
@@ -192,5 +215,5 @@ Set importance deliberately. The default (0.5) is fine for general notes, but co
 - For critical facts, store with importance >= 0.8
 
 **Slow recall:**
-- Reduce `embeddingDimensions` to 512 if latency is a concern
+- Reduce `embedding.dimensions` to 512 if latency is a concern
 - Ensure `dbPath` is on a fast disk (not a network mount)

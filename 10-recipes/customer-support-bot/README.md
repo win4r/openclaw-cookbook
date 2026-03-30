@@ -261,29 +261,23 @@ Create `~/.openclaw/workspaces/support/IDENTITY.md`:
 Set up a dedicated support agent in your OpenClaw config:
 
 ```bash
-# Create the support agent pointing to its own workspace
-openclaw config set agents.support.model "anthropic:claude-sonnet-4-20250514"
-openclaw config set agents.support.workspace "~/.openclaw/workspaces/support"
-
-# Optional: add a fallback model in case the primary is down
-openclaw config set agents.support.fallback "openai:gpt-4o"
-
-# Configure the Telegram bot for support
-openclaw plugin enable telegram
-openclaw config set telegram.bots.support.token "YOUR_SUPPORT_BOT_TOKEN"
-openclaw config set telegram.bots.support.agent "support"
+# Configure the Telegram channel for support
+openclaw plugins enable telegram
+openclaw config set channels.telegram.accounts.support-bot.botToken "YOUR_SUPPORT_BOT_TOKEN"
 ```
+
+The full agent and channel configuration is best done in `config.json` directly (see the Complete Configuration section below), since the agent config uses nested structures (`model.primary`, `model.fallbacks`, `tools.profile`).
 
 ### Access Policy for a Support Bot
 
 Unlike a personal bot, a support bot needs to be accessible to customers. Disable pairing requirement for the support bot:
 
 ```bash
-# Allow anyone to message the support bot
-openclaw config set telegram.policies.pairingRequired false
+# Allow anyone to message the support bot (open DM policy)
+openclaw config set channels.telegram.dmPolicy "open"
 
 # Allow group chats (if you want to use the bot in a support group)
-openclaw config set telegram.policies.allowGroups true
+openclaw config set channels.telegram.groupPolicy "open"
 ```
 
 **Security note:** With pairing disabled, anyone on Telegram can talk to your bot. This is correct for a customer-facing support bot. The SOUL.md boundaries and escalation rules in AGENTS.md keep the bot on-topic. If you want to restrict access to verified customers only, keep pairing enabled and pair customers as they contact you.
@@ -295,12 +289,16 @@ openclaw config set telegram.policies.allowGroups true
 Memory lets the support bot remember past interactions with each customer. A returning customer does not have to re-explain their issue.
 
 ```bash
-openclaw plugin enable memory-lancedb-pro
-
-# Configure memory for support context
-openclaw config set memory.autoExtract true
-openclaw config set memory.maxRecallResults 5
+openclaw plugins enable memory-lancedb-pro
 ```
+
+Memory requires a Jina API key for embeddings. Add it to `~/.openclaw/.env`:
+
+```bash
+echo 'JINA_API_KEY=your-jina-api-key-here' >> ~/.openclaw/.env
+```
+
+The full memory configuration (with `autoCapture`, `autoRecall`, and Jina embedding settings) is in the `config.json` -- see the Complete Configuration section below.
 
 Memory is scoped per user -- each customer has their own memory space. The bot does not mix up conversations between different customers.
 
@@ -311,7 +309,7 @@ Memory is scoped per user -- each customer has their own memory space. The bot d
 Restart the gateway:
 
 ```bash
-openclaw restart
+openclaw gateway --restart
 ```
 
 ### Verification Checklist
@@ -353,40 +351,59 @@ Here is the full `openclaw.json` for this recipe:
 ```json
 {
   "agents": {
-    "support": {
-      "model": "anthropic:claude-sonnet-4-20250514",
-      "workspace": "~/.openclaw/workspaces/support",
-      "fallback": "openai:gpt-4o"
-    }
-  },
-  "plugins": {
-    "telegram": {
-      "bots": {
-        "support": {
-          "token": "YOUR_SUPPORT_BOT_TOKEN",
-          "agent": "support"
-        }
-      },
-      "policies": {
-        "pairingRequired": false,
-        "allowGroups": true
-      }
+    "defaults": {
+      "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-5.4"] }
     },
-    "memory-lancedb-pro": {
+    "list": [
+      {
+        "id": "support",
+        "name": "Support Agent",
+        "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-5.4"] },
+        "workspace": "~/.openclaw/workspaces/support",
+        "tools": { "profile": "full" }
+      }
+    ]
+  },
+  "channels": {
+    "telegram": {
       "enabled": true,
-      "autoExtract": true,
-      "maxRecallResults": 5
+      "dmPolicy": "open",
+      "groupPolicy": "open",
+      "accounts": {
+        "support-bot": {
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "open"
+        }
+      }
     }
   },
-  "tools": {
-    "web_search": {
-      "enabled": false
+  "bindings": [
+    { "agentId": "support", "match": { "channel": "telegram", "accountId": "support-bot" } }
+  ],
+  "plugins": {
+    "allow": ["telegram", "memory-lancedb-pro"],
+    "entries": {
+      "memory-lancedb-pro": {
+        "enabled": true,
+        "config": {
+          "embedding": {
+            "provider": "openai-compatible",
+            "apiKey": "${JINA_API_KEY}",
+            "model": "jina-embeddings-v5-text-small",
+            "baseURL": "https://api.jina.ai/v1",
+            "dimensions": 1024
+          },
+          "dbPath": "~/.openclaw/memory/lancedb-pro",
+          "autoCapture": true,
+          "autoRecall": true
+        }
+      }
     }
   }
 }
 ```
 
-Note: Web search is disabled for the support bot. Customer support should only use the knowledge base -- not the open web -- to ensure answers are accurate and on-brand.
+Note: The knowledge base is provided via workspace skill files in `~/.openclaw/workspaces/support/skills/`. The agent references these skills to answer product questions with accurate, on-brand information.
 
 ---
 
@@ -395,6 +412,7 @@ Note: Web search is disabled for the support bot. Customer support should only u
 ```
 10-recipes/customer-support-bot/
   README.md              # This guide
+  config.json            # openclaw.json snippet
   workspace/
     SOUL.md              # Support agent personality
     IDENTITY.md          # Brand identity
@@ -453,10 +471,16 @@ Log the response. Do not argue with low ratings -- thank them and note the feedb
 Add a web chat widget alongside Telegram:
 
 ```bash
-openclaw plugin enable web
-openclaw config set web.agent "support"
-openclaw config set web.port 18790
-openclaw restart
+openclaw plugins enable web
+openclaw config set channels.web.enabled true
+openclaw config set channels.web.port 18790
+openclaw gateway --restart
+```
+
+Then add a binding for the web channel in your `config.json`:
+
+```json
+{ "agentId": "support", "match": { "channel": "web" } }
 ```
 
 The support bot is now available at `http://localhost:18790` as an embeddable chat widget, in addition to Telegram.
@@ -468,10 +492,13 @@ Configure model routing to use a smaller model for FAQ lookups and the full mode
 ```json
 {
   "agents": {
-    "support": {
-      "model": "anthropic:claude-sonnet-4-20250514",
-      "fallback": "anthropic:claude-haiku-4-20250514"
-    }
+    "list": [
+      {
+        "id": "support",
+        "name": "Support Agent",
+        "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["anthropic/claude-haiku-4-6"] }
+      }
+    ]
   }
 }
 ```
@@ -501,8 +528,8 @@ Configure model routing to use a smaller model for FAQ lookups and the full mode
 
 ### Memory not persisting between conversations
 
-1. Verify `memory-lancedb-pro` is enabled: `openclaw plugin list`
-2. Check `~/.openclaw/memory/` exists
+1. Verify `memory-lancedb-pro` is enabled: `openclaw plugins list`
+2. Check `~/.openclaw/memory/lancedb-pro` exists
 3. Memory extraction happens asynchronously -- allow a few seconds between storing and recalling
 
 ---

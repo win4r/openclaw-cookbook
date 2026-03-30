@@ -175,9 +175,11 @@ In multi-user mode, each user gets isolated conversation state:
 ```jsonc
 {
   "gateway": {
-    "mode": "multi",
+    "port": 18789,
+    "mode": "local",
     "auth": {
-      "token": "${OPENCLAW_AUTH_TOKEN}"
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   }
 }
@@ -204,11 +206,11 @@ Route simple requests to cheap models:
     "list": [
       {
         "id": "general",
-        "models": { "default": "claude-haiku-4-20250514" }
+        "model": { "primary": "anthropic/claude-haiku-4-5" }
       },
       {
         "id": "complex",
-        "models": { "default": "claude-opus-4-20250514" }
+        "model": { "primary": "anthropic/claude-opus-4-6" }
       }
     ]
   }
@@ -242,7 +244,7 @@ agent=general model=haiku input_tokens=500 output_tokens=1200 cost_usd=0.0004
 |------|----------|----------|
 | Configuration | `openclaw.json`, `.env` | Critical |
 | Workspace files | `workspace/` | Critical |
-| LanceDB data | `data/memory-lancedb/` | High |
+| LanceDB data | `~/.openclaw/memory/lancedb-pro/` | High |
 | Conversation history | `data/conversations/` | Medium |
 | Logs | `logs/` | Low |
 
@@ -259,7 +261,7 @@ cp -r workspace/ "$BACKUP_DIR/workspace/"
 cp .env "$BACKUP_DIR/.env"
 
 # LanceDB (stop writes during backup for consistency)
-cp -r data/memory-lancedb/ "$BACKUP_DIR/memory-lancedb/"
+cp -r ~/.openclaw/memory/lancedb-pro/ "$BACKUP_DIR/memory-lancedb/"
 
 # Compress
 tar -czf "$BACKUP_DIR.tar.gz" -C /backups/openclaw "$(date +%Y%m%d)"
@@ -291,7 +293,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/openclaw.example.com/privkey.pem;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:18789;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -309,8 +311,8 @@ server {
 
 ```bash
 # Only allow localhost access to the OpenClaw port
-sudo ufw allow from 127.0.0.1 to any port 3000
-sudo ufw deny 3000
+sudo ufw allow from 127.0.0.1 to any port 18789
+sudo ufw deny 18789
 ```
 
 ### Run as a non-root user
@@ -329,7 +331,7 @@ sudo chown -R openclaw:openclaw /opt/openclaw
 OpenClaw exposes a health check endpoint:
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:18789/health
 # {"status":"ok","uptime":3600,"agents":["main"],"plugins":["telegram","memory-lancedb-pro"]}
 ```
 
@@ -337,7 +339,7 @@ curl http://localhost:3000/health
 
 ```bash
 #!/bin/bash
-HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:18789/health)
 if [ "$HEALTH" != "200" ]; then
     echo "OpenClaw health check failed: HTTP $HEALTH"
     # Send alert (email, Slack, PagerDuty, etc.)
@@ -364,7 +366,7 @@ Before considering the gateway "ready":
 ## Production Checklist
 
 - [ ] Process manager configured (systemd/pm2/launchd)
-- [ ] Gateway in multi mode with auth token
+- [ ] Gateway auth enabled with `"mode": "token"` and a strong token
 - [ ] Reverse proxy with TLS
 - [ ] Firewall restricting direct port access
 - [ ] Running as non-root user

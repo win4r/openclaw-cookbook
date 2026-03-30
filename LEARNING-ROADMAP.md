@@ -168,7 +168,7 @@ graph TD
 You are ready when you can answer yes to all of these:
 
 - [ ] OpenClaw is installed and `openclaw --version` prints a version number
-- [ ] You can start the gateway with `openclaw start` and it stays running
+- [ ] You can start the gateway with `openclaw gateway` and it stays running
 - [ ] You have a bot on at least one channel (Telegram, Discord, Slack, or WhatsApp) that responds to messages
 - [ ] You have edited SOUL.md to give your agent a distinct personality
 - [ ] You can send a message to your bot from your phone and get a useful response

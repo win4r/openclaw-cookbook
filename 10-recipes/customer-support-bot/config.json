@@ -5,10 +5,10 @@
     },
     "list": [
       {
-        "id": "default",
-        "name": "Atlas",
+        "id": "support",
+        "name": "Support Agent",
         "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": ["openai/gpt-5.4"] },
-        "workspace": "~/.openclaw/workspace",
+        "workspace": "~/.openclaw/workspaces/support",
         "tools": { "profile": "full" }
       }
     ]
@@ -16,18 +16,18 @@
   "channels": {
     "telegram": {
       "enabled": true,
-      "dmPolicy": "pairing",
-      "groupPolicy": "none",
+      "dmPolicy": "open",
+      "groupPolicy": "open",
       "accounts": {
-        "personal-bot": {
+        "support-bot": {
           "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "dmPolicy": "pairing"
+          "dmPolicy": "open"
         }
       }
     }
   },
   "bindings": [
-    { "agentId": "default", "match": { "channel": "telegram", "accountId": "personal-bot" } }
+    { "agentId": "support", "match": { "channel": "telegram", "accountId": "support-bot" } }
   ],
   "plugins": {
     "allow": ["telegram", "memory-lancedb-pro"],

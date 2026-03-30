@@ -296,7 +296,7 @@ Key points:
 ## Workspace Design Tips
 
 1. **Start minimal.** Begin with just SOUL.md and AGENTS.md. Add files only when you have a specific need.
-2. **Test changes via CLI.** After editing a workspace file, run `openclaw chat` and test the new behavior before connecting channels.
+2. **Test changes via CLI.** After editing a workspace file, run `openclaw message send "test"` and test the new behavior before connecting channels.
 3. **Version control your workspace.** Workspace files are config, not data. Track them in git.
 4. **Iterate on phrasing.** Small wording changes in SOUL.md can significantly alter behavior. Test and refine.
 5. **Audit token usage.** If the agent starts losing context in long conversations, your workspace may be too large.

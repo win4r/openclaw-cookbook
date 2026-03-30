@@ -22,7 +22,7 @@ openclaw --version
 ## 2. Initialize
 
 ```bash
-openclaw init
+openclaw setup
 ```
 
 This creates the `~/.openclaw/` directory with the following structure:
@@ -30,12 +30,12 @@ This creates the `~/.openclaw/` directory with the following structure:
 ```
 ~/.openclaw/
   .env              # API keys and gateway configuration
-  config.yml        # Gateway settings (port, logging, defaults)
+  openclaw.json     # Gateway settings (port, logging, defaults)
   workspace/        # Agent workspace files (AGENTS.md, TOOLS.md, etc.)
   logs/             # Gateway request and error logs
 ```
 
-The init command walks you through basic setup interactively. You can also run `openclaw init --defaults` to accept all defaults and configure manually afterward.
+The setup command walks you through basic setup interactively. You can also run `openclaw setup --defaults` to accept all defaults and configure manually afterward.
 
 ## 3. Configure a Model Provider
 
@@ -61,7 +61,7 @@ echo 'ANTHROPIC_API_KEY=sk-ant-your-actual-key' >> ~/.openclaw/.env
 ## 4. Start the Gateway
 
 ```bash
-openclaw start
+openclaw gateway
 ```
 
 The gateway starts on port **18789** by default. You should see output like:
@@ -76,13 +76,13 @@ Workspace: ~/.openclaw/workspace
 To run in the background:
 
 ```bash
-openclaw start --daemon
+openclaw gateway --daemon
 ```
 
 ## 5. Your First Conversation
 
 ```bash
-openclaw chat "Hello"
+openclaw message send "Hello"
 ```
 
 You should get a response from the default model. This confirms the full pipeline works: CLI -> gateway -> model provider -> response.
@@ -90,7 +90,7 @@ You should get a response from the default model. This confirms the full pipelin
 For a multi-turn conversation:
 
 ```bash
-openclaw chat
+openclaw message send
 ```
 
 This opens an interactive session. Type `exit` or press Ctrl+C to end it.
@@ -101,7 +101,7 @@ Run through this checklist:
 
 - [ ] `openclaw --version` prints a version number
 - [ ] `openclaw status` shows the gateway is running
-- [ ] `openclaw chat "What model are you?"` returns a response
+- [ ] `openclaw message send "What model are you?"` returns a response
 - [ ] `http://localhost:18789` is reachable (try `curl http://localhost:18789/health`)
 - [ ] `~/.openclaw/.env` contains at least one valid API key
 
@@ -111,7 +111,7 @@ After completing the quickstart, here is what you have:
 
 ```mermaid
 graph LR
-    A[CLI: openclaw chat] -->|HTTP :18789| B[OpenClaw Gateway]
+    A[CLI: openclaw message send] -->|HTTP :18789| B[OpenClaw Gateway]
     B -->|API call| C[Model Provider<br>Anthropic / OpenAI]
     B -->|reads| D[~/.openclaw/workspace]
     B -->|writes| E[~/.openclaw/logs]
@@ -121,7 +121,7 @@ graph LR
 
 **Workspace** -- The `~/.openclaw/workspace/` directory contains agent definitions, tool configurations, and system prompts. The gateway reads these on every request so changes take effect immediately without restart.
 
-**Configuration** -- All configuration lives under `~/.openclaw/`. The `.env` file holds secrets (API keys, tokens). The `config.yml` file holds non-secret settings (port, log level, default model).
+**Configuration** -- All configuration lives under `~/.openclaw/`. The `.env` file holds secrets (API keys, tokens). The `openclaw.json` file holds non-secret settings (port, log level, default model).
 
 ## 8. Next Steps
 
@@ -139,7 +139,7 @@ Another process is using the default port. Either stop it or change the port:
 lsof -i :18789
 
 # Start on a different port
-openclaw start --port 18790
+openclaw gateway --port 18790
 ```
 
 ### "No API key configured" error
