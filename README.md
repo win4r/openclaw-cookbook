@@ -1,4 +1,4 @@
-# OpenClaw Cookbook
+# 🦞 OpenClaw Cookbook
 
 **Your AI agent gateway, running on your machine, talking to your users, using any model you choose.**
 

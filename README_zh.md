@@ -1,4 +1,4 @@
-# OpenClaw Cookbook
+# 🦞 OpenClaw Cookbook
 
 **你的 AI 智能体网关，运行在你的机器上，通过任何渠道对话，使用你选择的模型。**
 
