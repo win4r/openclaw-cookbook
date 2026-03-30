@@ -1,0 +1,32 @@
+{
+  "agents": {
+    "default": {
+      "model": "anthropic:claude-sonnet-4-20250514",
+      "workspace": "~/.openclaw/workspace"
+    }
+  },
+  "plugins": {
+    "telegram": {
+      "bots": {
+        "main": {
+          "token": "YOUR_BOT_TOKEN_HERE",
+          "agent": "default"
+        }
+      },
+      "policies": {
+        "pairingRequired": true,
+        "allowGroups": false
+      }
+    },
+    "memory-lancedb-pro": {
+      "enabled": true,
+      "autoExtract": true,
+      "maxRecallResults": 10
+    }
+  },
+  "tools": {
+    "web_search": {
+      "enabled": true
+    }
+  }
+}

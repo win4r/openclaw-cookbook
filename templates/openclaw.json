@@ -1,0 +1,136 @@
+// OpenClaw Configuration Template
+// Copy this file to your project root as openclaw.json and customize.
+// JSON does not natively support comments; strip them before use or
+// use OpenClaw's built-in comment-stripping loader.
+{
+  // ---------------------------------------------------------------------------
+  // Gateway — core server settings
+  // ---------------------------------------------------------------------------
+  "gateway": {
+    // Port the HTTP gateway listens on.
+    "port": 3000,
+
+    // Operating mode:
+    //   "single"  — one user, no auth required (local dev)
+    //   "multi"   — multiple users, auth enforced
+    "mode": "single",
+
+    // Authentication token for API access.
+    // In single mode this is optional; in multi mode it is required.
+    // Best practice: set via OPENCLAW_AUTH_TOKEN env var instead of hardcoding.
+    "auth": {
+      "token": "${OPENCLAW_AUTH_TOKEN}"
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Models — LLM provider configuration
+  // ---------------------------------------------------------------------------
+  "models": {
+    "providers": {
+      // Anthropic (Claude)
+      "anthropic": {
+        // Set via ANTHROPIC_API_KEY env var.
+        "apiKey": "${ANTHROPIC_API_KEY}",
+        "models": [
+          "claude-sonnet-4-20250514",
+          "claude-opus-4-20250514",
+          "claude-haiku-4-20250514"
+        ]
+      },
+
+      // OpenAI
+      "openai": {
+        // Set via OPENAI_API_KEY env var.
+        "apiKey": "${OPENAI_API_KEY}",
+        "models": [
+          "gpt-4o",
+          "gpt-4o-mini"
+        ]
+      }
+
+      // Add more providers as needed:
+      // "google": { "apiKey": "${GOOGLE_API_KEY}", "models": ["gemini-2.0-flash"] }
+      // "deepseek": { "apiKey": "${DEEPSEEK_API_KEY}", "models": ["deepseek-chat"] }
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Agents — define one or more agents with distinct personas and models
+  // ---------------------------------------------------------------------------
+  "agents": {
+    // Default model settings applied to all agents unless overridden.
+    "defaults": {
+      "models": {
+        // Primary model used for responses.
+        "default": "claude-sonnet-4-20250514",
+
+        // Fallback if the primary is unavailable or rate-limited.
+        "fallback": "gpt-4o"
+      }
+    },
+
+    // Agent list. Each agent has its own workspace directory and config.
+    "list": [
+      {
+        // Unique identifier. Referenced by channel routing.
+        "id": "main",
+
+        // Human-readable name.
+        "name": "Main Assistant",
+
+        // Path to this agent's workspace directory (relative to project root).
+        // Contains SOUL.md, AGENTS.md, TOOLS.md, etc.
+        "workspace": "./workspace",
+
+        // Override default models for this agent (optional).
+        "models": {
+          "default": "claude-sonnet-4-20250514"
+        }
+      }
+
+      // Add more agents for specialization:
+      // {
+      //   "id": "coding",
+      //   "name": "Coding Assistant",
+      //   "workspace": "./workspace-coding",
+      //   "models": { "default": "claude-opus-4-20250514" }
+      // },
+      // {
+      //   "id": "support",
+      //   "name": "Customer Support",
+      //   "workspace": "./workspace-support",
+      //   "models": { "default": "claude-haiku-4-20250514" }
+      // }
+    ]
+  },
+
+  // ---------------------------------------------------------------------------
+  // Plugins — enable and configure channel integrations and tools
+  // ---------------------------------------------------------------------------
+  "plugins": {
+    // Telegram bot integration.
+    "telegram": {
+      "enabled": false,
+      // Bot token from @BotFather. Set via TELEGRAM_BOT_TOKEN env var.
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      // Route Telegram messages to a specific agent.
+      "agent": "main"
+    },
+
+    // Long-term memory via LanceDB vector store.
+    "memory-lancedb-pro": {
+      "enabled": false,
+      // Jina embeddings API key for vector encoding.
+      // Set via JINA_API_KEY env var.
+      "jinaApiKey": "${JINA_API_KEY}",
+      // Directory for the LanceDB database files.
+      "dbPath": "./data/memory-lancedb"
+    }
+
+    // Other plugins:
+    // "discord": { "enabled": false, "botToken": "${DISCORD_BOT_TOKEN}", "agent": "main" }
+    // "slack":   { "enabled": false, "botToken": "${SLACK_BOT_TOKEN}", "agent": "main" }
+    // "whatsapp": { "enabled": false, "agent": "main" }
+  }
+}
