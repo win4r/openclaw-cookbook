@@ -92,9 +92,42 @@ project-root/
 
 Each workspace is fully independent. Changes to the coding agent's SOUL.md do not affect the support agent.
 
-## Agent Routing
+## Agent Management CLI
 
-Channels are routed to agents via `bindings`:
+Create and manage agents without hand-editing JSON:
+
+```bash
+# Add a new agent (creates workspace directory + config entry)
+openclaw agents add work
+
+# List all agents with their bindings
+openclaw agents list --bindings
+
+# Restart to pick up changes
+openclaw gateway restart
+
+# Verify channel connectivity
+openclaw channels status --probe
+```
+
+## Agent Routing & Bindings
+
+Channels are routed to agents via `bindings`. Bindings are evaluated in a **priority hierarchy**:
+
+| Priority | Match Type | Example |
+|----------|-----------|---------|
+| 1 (highest) | Exact peer match | Specific DM or group ID |
+| 2 | Parent peer match | Thread inheritance |
+| 3 | Guild + roles | Discord guild with role |
+| 4 | Guild ID | Any user in Discord guild |
+| 5 | Team ID | Slack team |
+| 6 | Account ID | Channel account match |
+| 7 | Channel wildcard | `accountId: "*"` |
+| 8 (lowest) | Fallback | Default agent |
+
+> **Rule:** If multiple bindings match in the same tier, the first one in config order wins.
+
+### Basic Binding Example
 
 ```jsonc
 {
@@ -119,10 +152,192 @@ Channels are routed to agents via `bindings`:
 }
 ```
 
-Routing rules:
-- Each binding maps a channel account to exactly one agent.
-- The CLI (`openclaw message send`) defaults to the first agent in the list unless `--agent <id>` is specified.
-- To route the same channel type to different agents, create multiple accounts and bindings.
+### Peer-Level Routing (Per-Person Agents)
+
+Route specific contacts to specific agents on the same WhatsApp number:
+
+```jsonc
+{
+  "bindings": [
+    {
+      "agentId": "alex",
+      "match": { "channel": "whatsapp", "peer": { "kind": "direct", "id": "+15551230001" } }
+    },
+    {
+      "agentId": "mia",
+      "match": { "channel": "whatsapp", "peer": { "kind": "direct", "id": "+15551230002" } }
+    },
+    {
+      "agentId": "default",
+      "match": { "channel": "whatsapp" }
+    }
+  ]
+}
+```
+
+> **Important:** Peer bindings always take precedence. Place them above broader channel matches.
+
+### Same Channel, Different Models
+
+Route WhatsApp to a fast model while Telegram uses a more capable one:
+
+```jsonc
+{
+  "agents": {
+    "list": [
+      { "id": "chat", "model": { "primary": "anthropic/claude-sonnet-4-6" } },
+      { "id": "opus", "model": { "primary": "anthropic/claude-opus-4-6" } }
+    ]
+  },
+  "bindings": [
+    { "agentId": "chat", "match": { "channel": "whatsapp" } },
+    { "agentId": "opus", "match": { "channel": "telegram" } }
+  ]
+}
+```
+
+## Multi-Account Channels
+
+Run multiple bot accounts on the same platform, each bound to a different agent.
+
+### Multiple Telegram Bots
+
+```jsonc
+{
+  "channels": {
+    "telegram": {
+      "accounts": {
+        "default": { "botToken": "123456:ABC...", "dmPolicy": "pairing" },
+        "alerts":  { "botToken": "987654:XYZ...", "dmPolicy": "allowlist" }
+      }
+    }
+  },
+  "bindings": [
+    { "agentId": "main",   "match": { "channel": "telegram", "accountId": "default" } },
+    { "agentId": "alerts", "match": { "channel": "telegram", "accountId": "alerts" } }
+  ]
+}
+```
+
+### Multiple WhatsApp Numbers
+
+```bash
+openclaw channels login --channel whatsapp --account personal
+openclaw channels login --channel whatsapp --account biz
+```
+
+### Multiple Discord Bots
+
+```jsonc
+{
+  "channels": {
+    "discord": {
+      "accounts": {
+        "default": { "token": "${DISCORD_BOT_TOKEN_MAIN}" },
+        "coding":  { "token": "${DISCORD_BOT_TOKEN_CODING}" }
+      }
+    }
+  }
+}
+```
+
+> **Note:** Each Discord bot needs its own token, Message Content Intent enabled, and guild invitations.
+
+## Per-Agent Sandbox & Tool Restrictions
+
+Isolate what each agent can do:
+
+```jsonc
+{
+  "agents": {
+    "list": [
+      {
+        "id": "family",
+        "sandbox": { "mode": "all", "scope": "agent" },
+        "tools": {
+          "allow": ["read"],
+          "deny": ["exec", "write"]
+        }
+      },
+      {
+        "id": "dev",
+        "tools": {
+          "allow": ["exec", "read", "write", "web_search"]
+        }
+      }
+    ]
+  }
+}
+```
+
+> **Note:** `tools.elevated` is **global** and sender-based — it cannot be configured per agent.
+
+## Cross-Agent Memory Search
+
+Agents can optionally search other agents' session transcripts:
+
+```jsonc
+{
+  "agents": {
+    "list": [
+      {
+        "id": "research",
+        "memorySearch": {
+          "qmd": {
+            "extraCollections": ["coding", "support"]
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+This lets the research agent search QMD session transcripts from the coding and support agents. It's opt-in — no cross-access by default.
+
+## Session Management
+
+Configure how sessions are scoped and reset:
+
+```jsonc
+{
+  "session": {
+    "scope": "per-sender",
+    "resetTriggers": ["/new", "/reset"],
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 10080
+    }
+  }
+}
+```
+
+| Key | Options | Description |
+|-----|---------|-------------|
+| `scope` | `per-sender`, `shared` | Whether each user gets their own session |
+| `resetTriggers` | Array of strings | Commands that reset the session |
+| `reset.mode` | `daily`, `idle`, `manual` | When sessions auto-reset |
+| `reset.atHour` | 0-23 | Hour for daily reset |
+| `reset.idleMinutes` | Number | Reset after N minutes of inactivity |
+
+## Isolation Rules
+
+### No Shared Credentials
+
+Each agent reads auth from its own state directory:
+
+```
+~/.openclaw/agents/<agentId>/agent/   # Auth profiles, model registry
+~/.openclaw/agents/<agentId>/sessions/ # Chat history
+```
+
+> **Never** reuse `agentDir` across agents — it causes auth/session collisions. If you need to share credentials, copy `auth-profiles.json`.
+
+### Skills Isolation
+
+- Agent-specific skills: `<workspace>/skills/`
+- Shared skills: `~/.openclaw/skills/`
 
 ## ClawTeam Swarm Orchestration
 

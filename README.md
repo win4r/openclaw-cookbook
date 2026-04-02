@@ -13,34 +13,38 @@ OpenClaw is a self-hosted, multi-channel AI agent gateway. This cookbook gives y
 ## What You Can Build
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Your Users                           │
-│   Telegram  ·  WhatsApp  ·  Discord  ·  Slack  · Web   │
-└─────────────┬───────────────────────────────┬───────────┘
-              │                               │
-              ▼                               ▼
-┌─────────────────────────────────────────────────────────┐
-│                   OpenClaw Gateway                      │
-│                                                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
-│  │  Agent A  │  │  Agent B  │  │  Agent C  │  Routing   │
-│  │ (Support) │  │ (Coding)  │  │(Research) │  & Auth    │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘             │
-│       │              │              │                    │
-│  ┌────┴──────────────┴──────────────┴────┐             │
-│  │         Model Provider Pool           │             │
-│  │  Claude · GPT · Gemini · DeepSeek     │             │
-│  │  MiniMax · Kimi · Ollama (local)      │             │
-│  └───────────────────────────────────────┘             │
-│                                                         │
-│  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌─────────┐ │
-│  │ Memory  │  │  Tools  │  │  Skills  │  │ Plugins │ │
-│  │(LanceDB)│  │  (exec) │  │  (.md)   │  │  (npm)  │ │
-│  └─────────┘  └─────────┘  └──────────┘  └─────────┘ │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         Your Users & Devices                     │
+│  Telegram · WhatsApp · Discord · Slack · Twitch · iMessage · Web │
+└─────────────┬──────────────────────────────────────┬─────────────┘
+              │                                      │
+              ▼                                      ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                        OpenClaw Gateway                          │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                      │
+│  │  Agent A  │  │  Agent B  │  │  Agent C  │  Routing & Bindings │
+│  │ (Support) │  │ (Coding)  │  │(Research) │  & Auth             │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘                      │
+│       │              │              │                             │
+│  ┌────┴──────────────┴──────────────┴────┐                      │
+│  │         Model Provider Pool (35+)     │                      │
+│  │  Claude · GPT · Gemini · DeepSeek     │                      │
+│  │  MiniMax · Kimi · Ollama · vLLM       │                      │
+│  └───────────────────────────────────────┘                      │
+│                                                                  │
+│  ┌─────────┐  ┌─────────┐  ┌──────┐  ┌─────────┐  ┌────────┐  │
+│  │ Memory  │  │  Tools  │  │Sched.│  │ Plugins │  │  Nodes │  │
+│  │(LanceDB)│  │  (exec) │  │(cron)│  │  (npm)  │  │(iOS/An)│  │
+│  └─────────┘  └─────────┘  └──────┘  └─────────┘  └────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Control UI  ·  Skills  ·  Canvas  ·  Voice  ·  Media   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**One gateway. Multiple agents. Any model. Every channel.**
+**One gateway. Multiple agents. Any model. Every channel. Your devices.**
 
 ---
 
@@ -49,17 +53,20 @@ OpenClaw is a self-hosted, multi-channel AI agent gateway. This cookbook gives y
 | # | Module | What You'll Build | Time |
 |---|--------|-------------------|------|
 | **01** | [Quickstart](./01-quickstart/) | Running OpenClaw instance with one command | 15 min |
-| **02** | [Channels](./02-channels/) | Telegram bot, Discord bot, Slack app, WhatsApp | 30 min each |
+| **02** | [Channels](./02-channels/) | Telegram, Discord, Slack, WhatsApp, Twitch, iMessage | 30 min each |
 | **03** | [Model Providers](./03-model-providers/) | Multi-model setup with fallbacks and routing | 20 min |
-| **04** | [Multi-Agent](./04-multi-agent/) | Specialized agents + ClawTeam swarm orchestration | 45 min |
+| **04** | [Multi-Agent](./04-multi-agent/) | Specialized agents, bindings, routing + ClawTeam swarm | 45 min |
 | **05** | [Memory](./05-memory/) | LanceDB long-term memory with semantic recall | 30 min |
 | **06** | [Tools](./06-tools/) | Custom tools, exec approvals, MCP integration | 40 min |
 | **07** | [Security](./07-security/) | SOUL.md hardening, auth, exec allowlists | 30 min |
 | **08** | [Workspace](./08-workspace/) | AGENTS.md, TOOLS.md, IDENTITY.md — persona programming | 30 min |
 | **09** | [Production](./09-production/) | Monitoring, logging, multi-user isolation, cost control | 45 min |
 | **10** | [Recipes](./10-recipes/) | End-to-end runnable scenarios | 30 min each |
+| **11** | [Scheduler](./11-scheduler/) | Cron jobs, reminders, heartbeat, automated tasks | 25 min |
+| **12** | [Nodes](./12-nodes/) | iOS, Android & macOS device integration | 30 min |
+| **13** | [Control UI](./13-control-ui/) | Web dashboard for managing your entire instance | 15 min |
 
-**Total: ~6 hours to master everything.** Or jump straight to a [recipe](#recipes) and learn by building.
+**Total: ~8 hours to master everything.** Or jump straight to a [recipe](#recipes) and learn by building.
 
 ---
 
@@ -108,12 +115,12 @@ That's it. Your private AI agent is running. Now make it useful — pick a modul
 
 Complete, runnable scenarios. Each recipe includes all configs, a docker-compose file (where applicable), and a verification checklist.
 
-| Recipe | Description | Models Used | Channels |
-|--------|-------------|-------------|----------|
-| [Personal AI on Telegram](./10-recipes/personal-ai-on-telegram/) | Your own AI assistant with memory, web search, and personality | Any | Telegram |
-| [Customer Support Bot](./10-recipes/customer-support-bot/) | Multi-language support agent with escalation rules and knowledge base | Claude + fallback | Telegram, Web |
-| [Code Review Team](./10-recipes/code-review-team/) | ClawTeam swarm that reviews PRs from multiple angles | Claude + GPT | GitHub + Slack |
-| [Research Assistant](./10-recipes/research-assistant/) | Agent that researches topics, summarizes findings, delivers via chat | GPT + Gemini | Telegram, Discord |
+| Recipe | Description | Difficulty | Time |
+|--------|-------------|------------|------|
+| [Personal AI on Telegram](./10-recipes/personal-ai-on-telegram/) | Private AI assistant with memory, web search, and personality | Beginner | 30 min |
+| [Customer Support Bot](./10-recipes/customer-support-bot/) | Multi-language support agent with escalation and knowledge base | Intermediate | 30 min |
+| [Code Review Team](./10-recipes/code-review-team/) | Multi-agent swarm with security + performance specialists | Advanced | 45 min |
+| [Research Assistant](./10-recipes/research-assistant/) | Web research, synthesis, structured reports + scheduled digests | Intermediate | 30 min |
 
 ---
 
@@ -186,15 +193,20 @@ openclaw-cookbook/
 │   ├── telegram-bot/
 │   ├── whatsapp-business/
 │   ├── discord-bot/
-│   └── slack-app/
-├── 03-model-providers/      # Configure LLM backends
-├── 04-multi-agent/          # Multiple agents + ClawTeam swarm
+│   ├── slack-app/
+│   ├── twitch/              # NEW: Twitch chat integration
+│   └── imessage/            # NEW: iMessage on macOS
+├── 03-model-providers/      # Configure LLM backends (35+ providers)
+├── 04-multi-agent/          # Agents, bindings, routing + ClawTeam swarm
 ├── 05-memory/               # LanceDB long-term memory
 ├── 06-tools/                # Custom tools and MCP
 ├── 07-security/             # Hardening and access control
 ├── 08-workspace/            # Persona programming with markdown
 ├── 09-production/           # Deploy, monitor, scale
 ├── 10-recipes/              # End-to-end runnable scenarios
+├── 11-scheduler/            # NEW: Cron jobs, reminders, heartbeat
+├── 12-nodes/                # NEW: iOS, Android & macOS devices
+├── 13-control-ui/           # NEW: Web dashboard
 ├── templates/               # Copy-paste config files
 └── troubleshooting/         # Common issues and fixes
 ```
@@ -203,9 +215,9 @@ openclaw-cookbook/
 
 ## Prerequisites
 
-- **Node.js** 18+ (recommend 22 LTS)
-- **One API key** from any supported provider (Anthropic, OpenAI, MiniMax, etc.)
-- **5 minutes** for quickstart, or ~6 hours for the full cookbook
+- **Node.js** 24 (recommended) or 22.14+
+- **One API key** from any supported provider (Anthropic, OpenAI, Google, MiniMax, etc.)
+- **5 minutes** for quickstart, or ~8 hours for the full cookbook
 
 Optional:
 - **Telegram account** (for the most popular channel integration)

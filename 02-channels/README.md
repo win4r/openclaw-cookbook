@@ -15,18 +15,18 @@ One gateway can run multiple channels simultaneously. Each channel can bind to a
 
 ## Channel Comparison
 
-| Feature | Telegram | Discord | Slack | WhatsApp |
-|---------|----------|---------|-------|----------|
-| **Setup difficulty** | Easy | Moderate | Moderate | Hard |
-| **Multiple bots per channel** | Yes | Yes | Yes (one app, multiple bots) | No (one number) |
-| **Group support** | Yes, with allowlist | Yes, with role-based | Yes, with channel-based | Yes, with group ID |
-| **DM access control** | Pairing system | Role-based | Workspace membership | Phone number |
-| **Streaming (partial responses)** | Yes | Yes | No (Slack API limitation) | No |
-| **Rich formatting** | Markdown subset | Full Markdown | Block Kit / mrkdwn | Limited |
-| **File/image support** | Yes | Yes | Yes | Yes |
-| **Free tier** | Unlimited bots | Unlimited bots | Free plan limits | Business API required |
-| **Plugin maturity** | Stable | Beta | Beta | Alpha |
-| **Best for** | Personal AI, small teams | Communities, gaming | Workplaces, enterprises | Customer-facing |
+| Feature | Telegram | Discord | Slack | WhatsApp | Twitch | iMessage |
+|---------|----------|---------|-------|----------|--------|----------|
+| **Setup difficulty** | Easy | Moderate | Moderate | Hard | Easy | Moderate |
+| **Multiple bots** | Yes | Yes | Yes | No (one number) | No | No |
+| **Group support** | Yes, with allowlist | Yes, with role-based | Yes, with channel-based | Yes, with group ID | Channel chat | Group chats |
+| **DM access control** | Pairing system | Role-based | Workspace membership | Phone number | User ID allowlist | Phone allowlist |
+| **Streaming** | Yes | Yes | No | No | No | No |
+| **Rich formatting** | Markdown subset | Full Markdown | Block Kit / mrkdwn | Limited | Plain text | iMessage format |
+| **File/image support** | Yes | Yes | Yes | Yes | No | Yes |
+| **Free tier** | Unlimited bots | Unlimited bots | Free plan limits | Business API required | Free | Free (macOS) |
+| **Plugin maturity** | Stable | Beta | Beta | Beta | Beta | Beta |
+| **Best for** | Personal AI, small teams | Communities, gaming | Workplaces, enterprises | Customer-facing | Streamers | Apple ecosystem |
 
 ---
 
@@ -52,6 +52,14 @@ One gateway can run multiple channels simultaneously. Each channel can bind to a
 - Build a customer-facing product where users contact you via WhatsApp
 - Need to reach users who only use WhatsApp (common in many regions)
 - Are willing to deal with Meta's Business API approval process
+
+**Start with Twitch** if you:
+- Stream on Twitch and want an AI assistant in your chat
+- Want to engage viewers with an interactive AI during streams
+
+**Start with iMessage** if you:
+- Live in the Apple ecosystem and want AI accessible from any Apple device
+- Want a seamless experience across iPhone, iPad, and Mac
 
 ---
 
@@ -135,6 +143,12 @@ Channel plugins store their runtime state in `~/.openclaw/<channel>/`. This incl
 | Discord | [discord-bot/](./discord-bot/) | 30 min |
 | Slack | [slack-app/](./slack-app/) | 30 min |
 | WhatsApp | [whatsapp-business/](./whatsapp-business/) | 45 min |
+| Twitch | [twitch/](./twitch/) | 20 min |
+| iMessage | [imessage/](./imessage/) | 15 min |
+
+### Plugin Channels (Community)
+
+Additional channels available via plugins: **Mattermost**, **Matrix**, **Microsoft Teams**, **Nostr**, **Signal**, **IRC**. Check the [OpenClaw plugin registry](https://docs.openclaw.ai) for setup guides.
 
 ---
 
